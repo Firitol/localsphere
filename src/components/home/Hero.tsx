@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { Search, MapPin, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
 export function Hero() {
   const heroImg = PlaceHolderImages.find(img => img.id === "hero-image");
@@ -44,14 +44,20 @@ export function Hero() {
           <div className="absolute -z-10 -top-20 -right-20 w-80 h-80 bg-accent/20 rounded-full blur-3xl" />
           <div className="absolute -z-10 -bottom-20 -left-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
           <div className="relative rounded-2xl overflow-hidden shadow-2xl border-8 border-white">
-            <Image 
-              src={heroImg?.imageUrl || ""} 
-              alt={heroImg?.description || "Hero"} 
-              width={1200}
-              height={800}
-              className="object-cover w-full h-auto"
-              data-ai-hint="digital workspace"
-            />
+            {heroImg?.imageUrl ? (
+              <Image 
+                src={heroImg.imageUrl} 
+                alt={heroImg.description || "Hero"} 
+                width={1200}
+                height={800}
+                className="object-cover w-full h-auto"
+                data-ai-hint={heroImg.imageHint || "digital workspace"}
+              />
+            ) : (
+              <div className="w-full aspect-video bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground">Loading preview...</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

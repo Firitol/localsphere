@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-image",
+      "description": "Professional digital workspace for local business growth",
+      "imageUrl": "https://picsum.photos/seed/localsphere1/1200/800",
+      "imageHint": "digital workspace"
+    },
+    {
+      "id": "service-gbp",
+      "description": "Google Business Profile optimization on a smartphone",
+      "imageUrl": "https://picsum.photos/seed/localsphere2/600/400",
+      "imageHint": "smartphone business"
+    },
+    {
+      "id": "service-seo",
+      "description": "Local search engine ranking graph",
+      "imageUrl": "https://picsum.photos/seed/localsphere3/600/400",
+      "imageHint": "seo ranking"
+    },
+    {
+      "id": "service-web",
+      "description": "Modern website development concept",
+      "imageUrl": "https://picsum.photos/seed/localsphere4/600/400",
+      "imageHint": "web design"
+    }
+  ]
 }
