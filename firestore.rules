@@ -7,62 +7,53 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isStaff() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+      if (!isSignedIn()) return false;
+      let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userDocPath) && get(userDocPath).data.role in ['admin', 'staff'];
     }
 
     // User profiles
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow get, update: if isSignedIn() && (request.auth.uid == userId || isStaff());
       allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && (request.auth.uid == userId || isStaff());
     }
 
-    // Businesses
+    // Businesses and their subcollections
     match /businesses/{businessId} {
-      // Allow individual get by ID if user is owner or ID matches UID
-      allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
-      
-      // Allow listing businesses if user owns them
-      allow list: if isSignedIn() && (isStaff() || resource.data.ownerUid == request.auth.uid);
-      
-      // Allow creation
+      // Check if user is the business owner (either by path ID or ownerUid field)
+      function isBusinessOwner() {
+        return isSignedIn() && (businessId == request.auth.uid || (resource != null && resource.data.ownerUid == request.auth.uid));
+      }
+
+      allow get, update: if isBusinessOwner() || isStaff();
+      // Listing top-level businesses requires ownerUid filter or staff access
+      allow list: if isSignedIn() && (isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      
-      // Allow updates
-      allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
-      
       allow delete: if isStaff();
 
-      // CRM Customers subcollection
-      match /customers/{customerId} {
-        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || resource.data.ownerUid == request.auth.uid);
-        allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
-        allow create: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.resource.data.ownerUid == request.auth.uid);
-        allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
-        allow delete: if isSignedIn() && (businessId == request.auth.uid || isStaff());
-      }
-
-      // Activity Feed subcollection
-      match /activities/{activityId} {
-        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || resource.data.ownerUid == request.auth.uid);
-        allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
-        allow create: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.resource.data.ownerUid == request.auth.uid);
-        allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
-        allow delete: if isSignedIn() && (businessId == request.auth.uid || isStaff());
-      }
-
-      // Analytics/SEO Metrics subcollection
-      match /seoMetrics/{metricId} {
-        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || resource.data.ownerUid == request.auth.uid);
-        allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
-        allow write: if isSignedIn() && (businessId == request.auth.uid || isStaff());
+      // Catch-all for subcollections (customers, activities, seoMetrics)
+      match /{subcollection}/{docId} {
+        // Allow read if the user owns the parent business (via path or data) or is staff
+        allow read: if isSignedIn() && (
+          businessId == request.auth.uid || 
+          isStaff() || 
+          (resource != null && resource.data.ownerUid == request.auth.uid)
+        );
+        
+        // Allow creation if the user owns the parent business
+        allow create: if isSignedIn() && (
+          businessId == request.auth.uid || 
+          isStaff() || 
+          request.resource.data.ownerUid == request.auth.uid
+        );
+        
+        // Allow updates and deletes
+        allow update, delete: if isSignedIn() && (
+          businessId == request.auth.uid || 
+          isStaff() || 
+          (resource != null && resource.data.ownerUid == request.auth.uid)
+        );
       }
     }
 
