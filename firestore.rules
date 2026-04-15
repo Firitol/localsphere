@@ -3,13 +3,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
-    }
-
-    // Defensive check for ownership
-    function isOwner(data) {
-      return isSignedIn() && data != null && data.get('ownerUid', '') == request.auth.uid;
     }
 
     function isUser(userId) {
@@ -17,41 +13,65 @@ service cloud.firestore {
     }
 
     function isStaff() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
 
+    function isBusinessOwner(businessId) {
+      return isSignedIn() && (
+        businessId == request.auth.uid || 
+        (exists(/databases/$(database)/documents/businesses/$(businessId)) && 
+         get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid)
+      );
+    }
+
+    // User profiles
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isStaff());
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (request.auth.uid == userId || isStaff());
     }
 
+    // Businesses
     match /businesses/{businessId} {
-      // Allow user to get their own business profile or if they are staff
-      allow get: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff());
-      // Allow listing businesses for the dashboard
-      allow list: if isSignedIn(); 
-      // Allow creation if they set themselves as owner
+      // Allow individual get by ID (ID often matches UID for new profiles)
+      allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
+      
+      // Allow listing businesses based on ownership filter
+      allow list: if isSignedIn() && (isStaff() || (request.query.limit <= 100 && request.query.filters.ownerUid == request.auth.uid));
+      
+      // Allow creation if the ownerUid is the current user
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      
       // Allow updates by owner or staff
-      allow update: if isSignedIn() && (isOwner(resource.data) || isStaff() || businessId == request.auth.uid);
+      allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
+      
       allow delete: if isStaff();
 
-      // Subcollections are private to the business owner or staff
-      // Using path-based check (businessId == request.auth.uid) is most robust for listing
-      match /{allSubcollections=**} {
-        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isStaff());
+      // CRM Customers subcollection
+      match /customers/{customerId} {
+        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isBusinessOwner(businessId) || isStaff());
+      }
+
+      // Activity Feed subcollection
+      match /activities/{activityId} {
+        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isBusinessOwner(businessId) || isStaff());
+      }
+
+      // Analytics/SEO Metrics subcollection
+      match /seoMetrics/{metricId} {
+        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isBusinessOwner(businessId) || isStaff());
       }
     }
 
-    match /inquiries/{id} {
-      // Publicly allowed to create inquiries for lead generation
+    // Public Service Inquiries (Lead Gen)
+    match /inquiries/{inquiryId} {
       allow create: if true;
-      // Only staff can manage inquiries
       allow read, write: if isStaff();
     }
 
+    // Payment/Subscription Records
     match /payments/{paymentId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaff());
