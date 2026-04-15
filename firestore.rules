@@ -7,8 +7,9 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Defensive check for ownership
     function isOwner(data) {
-      return isSignedIn() && data != null && data.ownerUid == request.auth.uid;
+      return isSignedIn() && data != null && data.get('ownerUid', '') == request.auth.uid;
     }
 
     function isUser(userId) {
@@ -16,7 +17,8 @@ service cloud.firestore {
     }
 
     function isStaff() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
 
     match /users/{userId} {
@@ -26,29 +28,27 @@ service cloud.firestore {
     }
 
     match /businesses/{businessId} {
+      // Allow user to get their own business profile or if they are staff
       allow get: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff());
+      // Allow listing businesses for the dashboard
       allow list: if isSignedIn(); 
+      // Allow creation if they set themselves as owner
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isSignedIn() && (isOwner(resource.data) || isStaff());
+      // Allow updates by owner or staff
+      allow update: if isSignedIn() && (isOwner(resource.data) || isStaff() || businessId == request.auth.uid);
       allow delete: if isStaff();
 
-      // Explicit rules for CRM and Activity subcollections
-      match /customers/{customerId} {
-        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff());
-      }
-      
-      match /activities/{activityId} {
-        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff());
-      }
-
+      // Subcollections are private to the business owner or staff
+      // Using path-based check (businessId == request.auth.uid) is most robust for listing
       match /{allSubcollections=**} {
-        allow read: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff() || resource == null);
-        allow write: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff() || (resource == null && request.resource.data.ownerUid == request.auth.uid));
+        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isStaff());
       }
     }
 
     match /inquiries/{id} {
+      // Publicly allowed to create inquiries for lead generation
       allow create: if true;
+      // Only staff can manage inquiries
       allow read, write: if isStaff();
     }
 
