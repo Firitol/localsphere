@@ -10,7 +10,9 @@
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "staff", "client"] },
-        "ownerUid": { "type": "string" }
+        "ownerUid": { "type": "string" },
+        "subscriptionStatus": { "type": "string", "enum": ["free", "pending", "active"] },
+        "currentPlan": { "type": "string" }
       }
     },
     "Business": {
@@ -37,6 +39,33 @@
         "ownerUid": { "type": "string" },
         "status": { "type": "string" }
       }
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "businessName": { "type": "string" },
+        "service": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Payment": {
+      "title": "Payment",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "planId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "default": "ETB" },
+        "method": { "type": "string", "enum": ["chapa", "telebirr", "cbe", "manual"] },
+        "status": { "type": "string", "enum": ["pending", "success", "failed"] },
+        "transactionRef": { "type": "string" },
+        "receiptUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -45,7 +74,7 @@
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
-      "description": "User profiles and roles."
+      "description": "User profiles and subscription status."
     },
     "/businesses/{businessId}": {
       "schema": { "$ref": "#/entities/Business" },
@@ -58,6 +87,10 @@
     "/inquiries/{inquiryId}": {
       "schema": { "$ref": "#/entities/Inquiry" },
       "description": "Public service inquiries."
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Transaction records for auditing and activation."
     }
   }
 }

@@ -11,6 +11,10 @@ service cloud.firestore {
       return isSignedIn() && data != null && data.ownerUid == request.auth.uid;
     }
 
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     function isStaff() {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
@@ -22,29 +26,27 @@ service cloud.firestore {
     }
 
     match /businesses/{businessId} {
-      // Allow get if the user owns the ID (fallback) or is the owner of existing data
-      allow get: if isSignedIn() && (request.auth.uid == businessId || isOwner(resource.data) || isStaff());
-      allow list: if isSignedIn(); // Queries MUST include where("ownerUid", "==", request.auth.uid)
+      allow get: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff());
+      allow list: if isSignedIn(); 
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow update: if isSignedIn() && (isOwner(resource.data) || isStaff());
       allow delete: if isStaff();
 
-      // Subcollections rules
       match /{allSubcollections=**} {
-        // Allow list/get/write if the data has the correct ownerUid
         allow read: if isSignedIn() && (isOwner(resource.data) || isStaff() || resource == null);
         allow write: if isSignedIn() && (isOwner(resource.data) || isStaff() || (resource == null && request.resource.data.ownerUid == request.auth.uid));
       }
     }
 
-    match /serviceOfferings/{id} {
-      allow read: if true;
-      allow write: if isStaff();
-    }
-
     match /inquiries/{id} {
       allow create: if true;
       allow read, write: if isStaff();
+    }
+
+    match /payments/{paymentId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaff());
+      allow update: if isStaff();
     }
   }
 }

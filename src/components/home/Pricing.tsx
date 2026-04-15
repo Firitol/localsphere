@@ -5,8 +5,9 @@ import Link from "next/link";
 
 const plans = [
   {
+    id: "foundation",
     name: "Foundation",
-    price: "$299",
+    price: "15,000",
     billing: "One-time setup",
     description: "Perfect for new businesses getting on the map.",
     features: [
@@ -20,8 +21,9 @@ const plans = [
     highlight: false
   },
   {
+    id: "growth",
     name: "Growth Monthly",
-    price: "$149",
+    price: "4,500",
     billing: "per month",
     description: "Our most popular plan for scaling traffic.",
     features: [
@@ -35,6 +37,7 @@ const plans = [
     highlight: true
   },
   {
+    id: "dominance",
     name: "Dominance",
     price: "Custom",
     billing: "Bespoke strategy",
@@ -56,9 +59,9 @@ export function Pricing() {
     <section className="py-24 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <h2 className="font-headline text-3xl lg:text-5xl font-bold text-primary">Simple, Transparent Pricing</h2>
+          <h2 className="font-headline text-3xl lg:text-5xl font-bold text-primary">Simple, Transparent Local Pricing</h2>
           <p className="text-muted-foreground text-lg">
-            Choose the plan that fits your business stage. No hidden fees, just growth.
+            Choose the plan that fits your business stage. No complex conversions, just growth.
           </p>
         </div>
 
@@ -77,7 +80,7 @@ export function Pricing() {
                 <h3 className="text-xl font-bold text-primary mb-2">{plan.name}</h3>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-primary">{plan.price}</span>
-                  <span className="text-muted-foreground text-sm">{plan.billing}</span>
+                  <span className="text-muted-foreground text-sm font-bold ml-1">{plan.price === 'Custom' ? '' : 'ETB'} {plan.billing}</span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">{plan.description}</p>
               </div>
@@ -91,11 +94,19 @@ export function Pricing() {
                 ))}
               </ul>
 
-              <Link href="/contact">
-                <Button className={`w-full py-6 rounded-xl font-bold ${plan.highlight ? 'bg-primary' : 'variant-outline'}`} variant={plan.highlight ? 'default' : 'outline'}>
-                  {plan.buttonText}
-                </Button>
-              </Link>
+              {plan.id === 'dominance' ? (
+                <Link href="/contact">
+                  <Button className="w-full py-6 rounded-xl font-bold" variant="outline">
+                    {plan.buttonText}
+                  </Button>
+                </Link>
+              ) : (
+                <Link href={`/checkout/${plan.id}`}>
+                  <Button className={`w-full py-6 rounded-xl font-bold ${plan.highlight ? 'bg-primary' : ''}`} variant={plan.highlight ? 'default' : 'outline'}>
+                    {plan.buttonText}
+                  </Button>
+                </Link>
+              )}
             </div>
           ))}
         </div>
