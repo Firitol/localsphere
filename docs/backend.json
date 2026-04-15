@@ -1,79 +1,609 @@
-
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "description": "Registered account information for a business owner.",
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
       "type": "object",
+      "description": "Represents a user within the LocalSphere system, including staff (admin, staff) and potentially clients accessing their portal.",
       "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "displayName": { "type": "string" },
-        "businessId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user, used for login and communication.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system (e.g., 'admin', 'staff', 'client'), determining access levels."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was last updated.",
+          "format": "date-time"
+        }
       },
-      "required": ["uid", "email"]
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "role",
+        "createdAt"
+      ]
     },
-    "Business": {
-      "title": "Business Profile",
-      "description": "Core information about the managed business.",
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
       "type": "object",
+      "description": "Represents a client organization or primary contact that LocalSphere provides services to.",
       "properties": {
-        "name": { "type": "string" },
-        "category": { "type": "string" },
-        "address": { "type": "string" },
-        "phone": { "type": "string" },
-        "description": { "type": "string" },
-        "website": { "type": "string" },
-        "gbpStatus": { "type": "string", "enum": ["verified", "pending", "not_started"] },
-        "ownerUid": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Client entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User entity if the client has a login to the LocalSphere platform. (Relationship: User 1:N Client)"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "The name of the client's organization or business."
+        },
+        "contactFirstName": {
+          "type": "string",
+          "description": "The first name of the primary contact person for the client."
+        },
+        "contactLastName": {
+          "type": "string",
+          "description": "The last name of the primary contact person for the client."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "The email address of the primary contact person.",
+          "format": "email"
+        },
+        "contactPhone": {
+          "type": "string",
+          "description": "The phone number of the primary contact person."
+        },
+        "address": {
+          "type": "string",
+          "description": "The main street address of the client or contact person."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city of the client's location."
+        },
+        "state": {
+          "type": "string",
+          "description": "The state or region of the client's location."
+        },
+        "zipCode": {
+          "type": "string",
+          "description": "The postal code of the client's location."
+        },
+        "country": {
+          "type": "string",
+          "description": "The country of the client's location."
+        },
+        "onboardingDate": {
+          "type": "string",
+          "description": "The date when the client was onboarded to LocalSphere's services.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the client relationship (e.g., 'active', 'onboarding', 'inactive')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "General notes or remarks about the client."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the client record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the client record was last updated.",
+          "format": "date-time"
+        }
       },
-      "required": ["name", "ownerUid"]
+      "required": [
+        "id",
+        "companyName",
+        "contactFirstName",
+        "contactLastName",
+        "contactEmail",
+        "onboardingDate",
+        "status",
+        "createdAt"
+      ]
     },
-    "Customer": {
-      "title": "Customer",
-      "description": "Customer record in the CRM.",
+    "BusinessProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BusinessProfile",
       "type": "object",
+      "description": "Represents a local business for which LocalSphere provides digital services, detailing its public-facing information and location.",
       "properties": {
-        "name": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "phone": { "type": "string" },
-        "notes": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "lead", "inactive"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the BusinessProfile entity."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to the Client entity who owns or manages this business. (Relationship: Client 1:N BusinessProfile)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The official name of the business (e.g., 'Mama's Ethiopian Restaurant')."
+        },
+        "primaryCategory": {
+          "type": "string",
+          "description": "The main category describing the business (e.g., 'Restaurant', 'Hair Salon', 'Medical Clinic')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description or 'about us' for the business."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical street address of the business."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city where the business is located."
+        },
+        "state": {
+          "type": "string",
+          "description": "The state or region where the business is located."
+        },
+        "zipCode": {
+          "type": "string",
+          "description": "The postal code of the business location."
+        },
+        "country": {
+          "type": "string",
+          "description": "The country where the business is located."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The primary contact phone number for the business."
+        },
+        "websiteUrl": {
+          "type": "string",
+          "description": "The URL of the business's official website.",
+          "format": "uri"
+        },
+        "googleBusinessProfileUrl": {
+          "type": "string",
+          "description": "The URL of the business's Google Business Profile.",
+          "format": "uri"
+        },
+        "latitude": {
+          "type": "number",
+          "description": "The geographical latitude of the business location for map integration."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "The geographical longitude of the business location for map integration."
+        },
+        "status": {
+          "type": "string",
+          "description": "The operational status of the business profile (e.g., 'active', 'paused', 'needs attention')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the business profile record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the business profile record was last updated.",
+          "format": "date-time"
+        }
       },
-      "required": ["name"]
+      "required": [
+        "id",
+        "clientId",
+        "name",
+        "address",
+        "city",
+        "country",
+        "createdAt"
+      ]
     },
-    "Activity": {
-      "title": "Business Activity",
-      "description": "Log of operations and updates.",
+    "ServiceOffering": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ServiceOffering",
       "type": "object",
+      "description": "Defines the types of digital services that LocalSphere offers to its clients.",
       "properties": {
-        "type": { "type": "string" },
-        "content": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" }
-      }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ServiceOffering entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the service (e.g., 'Google Business Profile Optimization', 'Basic Website Development')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of what the service includes."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the service (e.g., 'SEO', 'Website', 'Content Marketing', 'Reputation Management')."
+        },
+        "oneTimeSetupFee": {
+          "type": "number",
+          "description": "The standard one-time setup fee for this service, if applicable."
+        },
+        "monthlySubscriptionFee": {
+          "type": "number",
+          "description": "The standard monthly subscription fee for this service, if applicable."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates if the service offering is currently available for purchase."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the service offering was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the service offering was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "category",
+        "isActive",
+        "createdAt"
+      ]
+    },
+    "ClientService": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ClientService",
+      "type": "object",
+      "description": "Represents an active or historical instance of a ServiceOffering provided to a specific BusinessProfile.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ClientService entity."
+        },
+        "businessProfileId": {
+          "type": "string",
+          "description": "Reference to the BusinessProfile entity receiving this service. (Relationship: BusinessProfile 1:N ClientService)"
+        },
+        "serviceOfferingId": {
+          "type": "string",
+          "description": "Reference to the ServiceOffering entity that defines this service. (Relationship: ServiceOffering 1:N ClientService)"
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The date when the service officially started for the client.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The projected or actual date when a subscription-based service is scheduled to end.",
+          "format": "date-time"
+        },
+        "actualSetupFee": {
+          "type": "number",
+          "description": "The actual one-time setup fee charged for this specific service instance."
+        },
+        "actualMonthlyFee": {
+          "type": "number",
+          "description": "The actual monthly fee charged for this specific service instance, if applicable."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of this service instance (e.g., 'active', 'in progress', 'completed', 'cancelled', 'paused')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Specific notes, updates, or progress reports for this client service."
+        },
+        "assignedStaffId": {
+          "type": "string",
+          "description": "Reference to the User entity (staff member) assigned to manage or deliver this service. (Relationship: User 1:N ClientService)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the client service record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the client service record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "businessProfileId",
+        "serviceOfferingId",
+        "startDate",
+        "status",
+        "createdAt"
+      ]
+    },
+    "BusinessReview": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BusinessReview",
+      "type": "object",
+      "description": "Stores information about reviews received by a BusinessProfile from various platforms.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the BusinessReview entity."
+        },
+        "businessProfileId": {
+          "type": "string",
+          "description": "Reference to the BusinessProfile this review belongs to. (Relationship: BusinessProfile 1:N BusinessReview)"
+        },
+        "platform": {
+          "type": "string",
+          "description": "The platform where the review was originally posted (e.g., 'Google', 'Facebook', 'Yelp')."
+        },
+        "reviewerName": {
+          "type": "string",
+          "description": "The name or username of the person who posted the review."
+        },
+        "rating": {
+          "type": "number",
+          "description": "The numerical rating given in the review (e.g., 1-5 stars)."
+        },
+        "comment": {
+          "type": "string",
+          "description": "The text content of the review comment."
+        },
+        "reviewDate": {
+          "type": "string",
+          "description": "The date and time when the review was posted.",
+          "format": "date-time"
+        },
+        "response": {
+          "type": "string",
+          "description": "The response provided by the business or LocalSphere to the review."
+        },
+        "sentiment": {
+          "type": "string",
+          "description": "The determined sentiment of the review (e.g., 'positive', 'negative', 'neutral')."
+        },
+        "isResponded": {
+          "type": "boolean",
+          "description": "Indicates whether a response has been made to this review."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the review record was created in the system (e.g., when it was fetched).",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the review record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "businessProfileId",
+        "platform",
+        "reviewerName",
+        "rating",
+        "reviewDate",
+        "createdAt"
+      ]
+    },
+    "SEOMetric": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SEOMetric",
+      "type": "object",
+      "description": "Records various SEO and online presence performance metrics for a BusinessProfile over time.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SEOMetric entity."
+        },
+        "businessProfileId": {
+          "type": "string",
+          "description": "Reference to the BusinessProfile this metric is associated with. (Relationship: BusinessProfile 1:N SEOMetric)"
+        },
+        "metricType": {
+          "type": "string",
+          "description": "The type of metric being recorded (e.g., 'Google Search Views', 'Google Map Views', 'Website Clicks', 'Direction Requests', 'Call Clicks', 'Keyword Ranking')."
+        },
+        "value": {
+          "type": "number",
+          "description": "The numerical value of the metric at the recorded date."
+        },
+        "dateRecorded": {
+          "type": "string",
+          "description": "The specific date or date-time when this metric value was recorded.",
+          "format": "date-time"
+        },
+        "source": {
+          "type": "string",
+          "description": "The source from which the metric data was obtained (e.g., 'Google Business Profile Insights', 'Google Analytics', 'Third-Party SEO Tool')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the metric record was created in the system.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the metric record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "businessProfileId",
+        "metricType",
+        "value",
+        "dateRecorded",
+        "source",
+        "createdAt"
+      ]
     }
   },
   "auth": {
-    "providers": ["google.com", "password"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": "#/backend/entities/UserProfile",
-      "description": "User account settings."
-    },
-    "/businesses/{businessId}": {
-      "schema": "#/backend/entities/Business",
-      "description": "Primary business details."
-    },
-    "/businesses/{businessId}/customers/{customerId}": {
-      "schema": "#/backend/entities/Customer",
-      "description": "CRM customer records."
-    },
-    "/businesses/{businessId}/activities/{activityId}": {
-      "schema": "#/backend/entities/Activity",
-      "description": "Operation logs."
-    }
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles and their roles within the LocalSphere system (admin, staff, client). The document ID ({userId}) must match `request.auth.uid`. User roles are managed here for DBAC. No further denormalization for authorization needed as this is the root of identity."
+        }
+      },
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Represents client organizations. Documents include a 'userId' field, which is the Firebase Auth UID of the primary client user associated with this organization. This 'userId' is critical for authorization independence, allowing client users to directly manage their own client record and associated data without `get()` calls on parent user profiles."
+        }
+      },
+      {
+        "path": "/serviceOfferings/{serviceOfferingId}",
+        "definition": {
+          "entityName": "ServiceOffering",
+          "schema": {
+            "$ref": "#/backend/entities/ServiceOffering"
+          },
+          "description": "A global catalog of digital services offered by LocalSphere. Accessible read-only by all authenticated users (clients, staff, admin) to view available services, with write access restricted to staff and admin roles. No denormalized authorization fields are required as it's a public catalog with role-based write access."
+        }
+      },
+      {
+        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}",
+        "definition": {
+          "entityName": "BusinessProfile",
+          "schema": {
+            "$ref": "#/backend/entities/BusinessProfile"
+          },
+          "description": "Details for a specific local business. This document includes denormalized 'clientId' (from its parent Client) and 'clientOwnerUserId' (copied from the parent Client's 'userId') for authorization independence. This enables client users to access their specific business profiles without a security rule `get()` call to the parent Client document, supporting efficient QAPs.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the parent Client organization."
+            },
+            {
+              "name": "businessProfileId",
+              "description": "The unique identifier of the Business Profile."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}/clientServices/{clientServiceId}",
+        "definition": {
+          "entityName": "ClientService",
+          "schema": {
+            "$ref": "#/backend/entities/ClientService"
+          },
+          "description": "Records an instance of a service provided to a specific Business Profile. This document includes denormalized 'clientId' (from its grandparent Client) and 'clientOwnerUserId' (copied from the grandparent Client's 'userId' via BusinessProfile) for authorization independence. This allows direct authorization checks and QAPs without `get()` calls.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the grandparent Client organization."
+            },
+            {
+              "name": "businessProfileId",
+              "description": "The unique identifier of the parent Business Profile."
+            },
+            {
+              "name": "clientServiceId",
+              "description": "The unique identifier of the Client Service instance."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}/businessReviews/{businessReviewId}",
+        "definition": {
+          "entityName": "BusinessReview",
+          "schema": {
+            "$ref": "#/backend/entities/BusinessReview"
+          },
+          "description": "Stores reviews for a Business Profile. This document includes denormalized 'clientId' (from its grandparent Client) and 'clientOwnerUserId' (copied from the grandparent Client's 'userId' via BusinessProfile) for authorization independence. This allows direct authorization checks and QAPs without `get()` calls.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the grandparent Client organization."
+            },
+            {
+              "name": "businessProfileId",
+              "description": "The unique identifier of the parent Business Profile."
+            },
+            {
+              "name": "businessReviewId",
+              "description": "The unique identifier of the Business Review."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}/seoMetrics/{seoMetricId}",
+        "definition": {
+          "entityName": "SEOMetric",
+          "schema": {
+            "$ref": "#/backend/entities/SEOMetric"
+          },
+          "description": "Records SEO performance metrics for a Business Profile. This document includes denormalized 'clientId' (from its grandparent Client) and 'clientOwnerUserId' (copied from the grandparent Client's 'userId' via BusinessProfile) for authorization independence. This allows direct authorization checks and QAPs without `get()` calls.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the grandparent Client organization."
+            },
+            {
+              "name": "businessProfileId",
+              "description": "The unique identifier of the parent Business Profile."
+            },
+            {
+              "name": "seoMetricId",
+              "description": "The unique identifier of the SEO Metric."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure for LocalSphere Digital Services is designed with a strong emphasis on Authorization Independence, Structural Segregation, and Access Modeling to ensure robust security, scalability, and debuggability. \n\n**Authorization Independence (Denormalization Strategy):**\n\nTo eliminate the need for `get()` calls in Firestore Security Rules and enable atomic operations, key authorization fields are denormalized downwards through the hierarchy:\n\n1.  **Client-Level Ownership:** The `Client` document (`/clients/{clientId}`) contains a `userId` field, linking the client organization to a specific Firebase Authentication UID. This directly enables authorization for individual client users accessing their own client organization's data.\n2.  **BusinessProfile Denormalization:** Each `BusinessProfile` document (nested under a `Client` at `/clients/{clientId}/businessProfiles/{businessProfileId}`) will explicitly denormalize `clientId` (from its parent) and, crucially, `clientOwnerUserId` (copied from the `userId` field of the grandparent `Client` document). This allows rules for `BusinessProfile` documents to directly compare `request.auth.uid` with `resource.data.clientOwnerUserId` without fetching the parent `Client` document.\n3.  **Subcollection Denormalization:** For `ClientService`, `BusinessReview`, and `SEOMetric` documents (nested under `BusinessProfile`), `businessProfileId` (from parent), `clientId` (from grandparent), and `clientOwnerUserId` (from great-grandparent `Client` via `BusinessProfile`) will be denormalized. This ensures that authorization checks for any document in these deepest subcollections can be performed solely on the `resource.data` of the document itself, making rules extremely efficient and independent of parent documents.\n\n**QAPs (Rules are not Filters) Support:**\n\nThe denormalization strategy directly supports Queryable Access Patterns (QAPs) by allowing secure `list` operations:\n\n*   **Client User Access:** When a client user needs to list their `BusinessProfile`s, `ClientService`s, `BusinessReview`s, or `SEOMetric`s, they can perform queries like `db.collectionGroup('businessProfiles').where('clientOwnerUserId', '==', request.auth.uid).get()`. The security rules can then directly validate `resource.data.clientOwnerUserId == request.auth.uid`, ensuring that only documents owned by the authenticated user are returned, without needing to filter on the client-side or perform expensive `get()` calls in rules.\n*   **Staff/Admin Access:** Staff and admin users (identified by their `role` in `/users/{userId}`) will have broader access to all data, enabled by checking `request.auth.uid` against a dedicated `/roles_admin/{uid}` or `resource.data.role` (if `User.role` is authoritative), and can query across collections as needed.\n\n**Structural Segregation:**\n\n*   **`/users/{userId}`:** Stores user authentication and role information, providing a single source of truth for identity and permissions. Access is primarily `owner == request.auth.uid` with admin overrides.\n*   **`/serviceOfferings/{serviceOfferingId}`:** This top-level collection holds global, static service definitions. It has a homogenous security posture: read-only for clients, read/write for staff/admin. This clear segregation simplifies rules significantly.\n*   **Hierarchical Client-Business Data:** The nesting of `BusinessProfile` under `Client`, and `ClientService`, `BusinessReview`, `SEOMetric` under `BusinessProfile`, creates logical data silos. This means a client user, for example, can only navigate to `/clients/{clientId}/...` if `clientId` is associated with their `userId`, making rules very intuitive and scoped.\n\nThis architecture prioritizes security and performance by moving authorization logic from complex rule evaluations to predictable data structures and explicit denormalized fields."
   }
 }

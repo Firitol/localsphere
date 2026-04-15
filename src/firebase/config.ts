@@ -1,9 +1,8 @@
-
 export const firebaseConfig = {
-  apiKey: "REPLACE_WITH_ACTUAL_API_KEY",
-  authDomain: "localsphere-app.firebaseapp.com",
-  projectId: "localsphere-app",
-  storageBucket: "localsphere-app.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:0000000000000000"
+  "projectId": "studio-4771668138-ed963",
+  "appId": "1:798820349097:web:feae469d3aa0d3079c25b8",
+  "apiKey": "AIzaSyBeev5hkfBxH3Fub_j52xifi1ec1mUygFc",
+  "authDomain": "studio-4771668138-ed963.firebaseapp.com",
+  "measurementId": "",
+  "messagingSenderId": "798820349097"
 };
