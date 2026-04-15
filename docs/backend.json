@@ -3,30 +3,56 @@
   "entities": {
     "UserProfile": {
       "title": "User Profile",
-      "description": "Stored information about a registered LocalSphere user.",
+      "description": "Registered account information for a business owner.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "photoURL": { "type": "string" },
+        "businessId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email"]
     },
-    "Inquiry": {
-      "title": "Service Inquiry",
-      "description": "Details from the service inquiry form.",
+    "Business": {
+      "title": "Business Profile",
+      "description": "Core information about the managed business.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "description": { "type": "string" },
+        "website": { "type": "string" },
+        "gbpStatus": { "type": "string", "enum": ["verified", "pending", "not_started"] },
+        "ownerUid": { "type": "string" }
+      },
+      "required": ["name", "ownerUid"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer record in the CRM.",
       "type": "object",
       "properties": {
         "name": { "type": "string" },
         "email": { "type": "string", "format": "email" },
-        "businessName": { "type": "string" },
-        "service": { "type": "string" },
-        "message": { "type": "string" },
+        "phone": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "lead", "inactive"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "email", "businessName", "service"]
+      "required": ["name"]
+    },
+    "Activity": {
+      "title": "Business Activity",
+      "description": "Log of operations and updates.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -35,11 +61,19 @@
   "firestore": {
     "/users/{userId}": {
       "schema": "#/backend/entities/UserProfile",
-      "description": "User profile data."
+      "description": "User account settings."
     },
-    "/inquiries/{inquiryId}": {
-      "schema": "#/backend/entities/Inquiry",
-      "description": "Customer service inquiries."
+    "/businesses/{businessId}": {
+      "schema": "#/backend/entities/Business",
+      "description": "Primary business details."
+    },
+    "/businesses/{businessId}/customers/{customerId}": {
+      "schema": "#/backend/entities/Customer",
+      "description": "CRM customer records."
+    },
+    "/businesses/{businessId}/activities/{activityId}": {
+      "schema": "#/backend/entities/Activity",
+      "description": "Operation logs."
     }
   }
 }

@@ -1,20 +1,32 @@
 
 "use client";
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, Settings, User, Bell, ChevronRight, BarChart3, Star } from "lucide-react";
+import { 
+  Loader2, 
+  LayoutDashboard, 
+  Users, 
+  Settings, 
+  Globe, 
+  TrendingUp, 
+  PlusCircle, 
+  ChevronRight,
+  Activity,
+  BarChart3
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
-import { collection, query, where } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { collection, query, limit, orderBy, onSnapshot, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import Link from "next/link";
+import { Navbar } from "@/components/layout/Navbar";
 
 export default function DashboardPage() {
   const { user, loading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const [businessData, setBusinessData] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -22,12 +34,30 @@ export default function DashboardPage() {
     }
   }, [user, loading, router]);
 
-  const inquiriesQuery = useMemo(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, "inquiries"), where("email", "==", user.email));
-  }, [firestore, user]);
+  // Fetch business profile associated with user
+  useEffect(() => {
+    if (!user || !firestore) return;
+    const q = query(collection(firestore, "businesses"), limit(1)); // Mocking single business for MVP
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setBusinessData({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+      }
+    });
+    return unsubscribe;
+  }, [user, firestore]);
 
-  const { data: inquiries, loading: inquiriesLoading } = useCollection(inquiriesQuery);
+  const customersQuery = useMemo(() => {
+    if (!firestore || !businessData) return null;
+    return query(collection(firestore, "businesses", businessData.id, "customers"), limit(5), orderBy("createdAt", "desc"));
+  }, [firestore, businessData]);
+
+  const activitiesQuery = useMemo(() => {
+    if (!firestore || !businessData) return null;
+    return query(collection(firestore, "businesses", businessData.id, "activities"), limit(5), orderBy("timestamp", "desc"));
+  }, [firestore, businessData]);
+
+  const { data: customers, loading: customersLoading } = useCollection(customersQuery);
+  const { data: activities, loading: activitiesLoading } = useCollection(activitiesQuery);
 
   if (loading || !user) {
     return (
@@ -40,108 +70,149 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col bg-accent/5">
       <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-12">
+      <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
-          <aside className="w-full lg:w-64 space-y-2">
-            {[
-              { label: "Overview", icon: LayoutDashboard, active: true },
-              { label: "My Profile", icon: User, active: false },
-              { label: "Notifications", icon: Bell, active: false },
-              { label: "Settings", icon: Settings, active: false },
-            ].map((item, idx) => (
-              <Button
-                key={idx}
-                variant={item.active ? "default" : "ghost"}
-                className={`w-full justify-start rounded-xl ${item.active ? "" : "text-muted-foreground"}`}
-              >
-                <item.icon className="w-4 h-4 mr-3" />
-                {item.label}
-              </Button>
-            ))}
+          {/* Sidebar Navigation */}
+          <aside className="w-full lg:w-72 space-y-4">
+            <div className="p-6 bg-white rounded-3xl shadow-sm border space-y-2">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-2">Management</p>
+              {[
+                { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", active: true },
+                { label: "Business Profile", icon: Globe, href: "/dashboard/business", active: false },
+                { label: "Customers (CRM)", icon: Users, href: "/dashboard/customers", active: false },
+                { label: "Performance", icon: BarChart3, href: "/dashboard/analytics", active: false },
+              ].map((item, idx) => (
+                <Link key={idx} href={item.href}>
+                  <Button
+                    variant={item.active ? "default" : "ghost"}
+                    className={`w-full justify-start rounded-xl mb-1 ${item.active ? "bg-primary" : "text-muted-foreground"}`}
+                  >
+                    <item.icon className="w-4 h-4 mr-3" />
+                    {item.label}
+                  </Button>
+                </Link>
+              ))}
+              <div className="pt-4 border-t mt-4">
+                <Link href="/dashboard/settings">
+                  <Button variant="ghost" className="w-full justify-start rounded-xl text-muted-foreground">
+                    <Settings className="w-4 h-4 mr-3" /> Settings
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="p-6 bg-primary text-primary-foreground rounded-3xl shadow-lg space-y-4">
+               <h4 className="font-bold flex items-center gap-2"><PlusCircle className="w-4 h-4" /> Quick Actions</h4>
+               <Button variant="secondary" className="w-full justify-start" size="sm" onClick={() => router.push('/dashboard/customers')}>
+                  Add New Customer
+               </Button>
+               <Button variant="secondary" className="w-full justify-start" size="sm" onClick={() => router.push('/dashboard/business')}>
+                  Post Status Update
+               </Button>
+            </div>
           </aside>
 
-          {/* Main Content */}
+          {/* Main Workspace */}
           <div className="flex-1 space-y-8">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold font-headline text-primary">Welcome, {user.displayName || "Business Owner"}!</h1>
-              <p className="text-muted-foreground">Manage your local growth tools and track your inquiries.</p>
+            <header className="space-y-2">
+              <h1 className="text-3xl font-bold font-headline text-primary">
+                {businessData?.name ? `${businessData.name} Overview` : "Operations Dashboard"}
+              </h1>
+              <p className="text-muted-foreground">Manage your business operations and visibility from one place.</p>
+            </header>
+
+            {/* Key Performance Indicators */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {[
+                { label: "Total Customers", value: customers?.length || "0", sub: "+2 this week", icon: Users },
+                { label: "Google Visibility", value: "High", sub: "Verified status", icon: Globe },
+                { label: "Activity Score", value: "88%", sub: "Improving", icon: TrendingUp },
+              ].map((stat, idx) => (
+                <Card key={idx} className="rounded-3xl border-none shadow-sm overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">{stat.label}</CardTitle>
+                    <stat.icon className="w-4 h-4 text-accent" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary">{stat.value}</div>
+                    <p className="text-xs text-green-600 font-bold mt-1">{stat.sub}</p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="rounded-2xl shadow-sm border-none bg-primary text-primary-foreground">
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-primary-foreground/70 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" /> SEO Health Score
-                  </CardDescription>
-                  <CardTitle className="text-4xl font-bold">84%</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs">Up 12% from last month</p>
-                </CardContent>
-              </Card>
-              <Card className="rounded-2xl shadow-sm border-none bg-white">
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-accent" /> Active Inquiries
-                  </CardDescription>
-                  <CardTitle className="text-4xl font-bold text-primary">{inquiries?.length || 0}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Latest inquiry from today</p>
-                </CardContent>
-              </Card>
-              <Card className="rounded-2xl shadow-sm border-none bg-white">
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-primary" /> Visibility Index
-                  </CardDescription>
-                  <CardTitle className="text-4xl font-bold text-primary">High</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Ranking for 15+ keywords</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity / Inquiries */}
-            <Card className="rounded-2xl shadow-sm border-none">
-              <CardHeader>
-                <CardTitle className="text-xl">Your Recent Service Inquiries</CardTitle>
-                <CardDescription>Track the status of your requests for digital growth.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {inquiriesLoading ? (
-                  <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted" /></div>
-                ) : inquiries && inquiries.length > 0 ? (
-                  inquiries.map((inquiry: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-4 rounded-xl border group hover:bg-accent/5 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                          <BarChart3 className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-primary">{inquiry.service || "General Inquiry"}</p>
-                          <p className="text-sm text-muted-foreground">{inquiry.businessName}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-xs font-bold uppercase px-2 py-1 rounded bg-secondary text-secondary-foreground">Pending</span>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-12 text-center text-muted-foreground space-y-4">
-                    <p>You haven't sent any inquiries yet.</p>
-                    <Link href="/contact">
-                      <Button variant="outline">Start an Inquiry</Button>
-                    </Link>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              {/* Recent Customers CRM Preview */}
+              <Card className="rounded-3xl border-none shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Recent Customers</CardTitle>
+                    <CardDescription>Latest additions to your database.</CardDescription>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <Link href="/dashboard/customers">
+                    <Button variant="outline" size="sm">View All</Button>
+                  </Link>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {customersLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted" /></div>
+                  ) : customers && customers.length > 0 ? (
+                    customers.map((c: any, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-accent/5 rounded-2xl group hover:bg-accent/10 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                            {c.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-primary">{c.name}</p>
+                            <p className="text-xs text-muted-foreground">{c.phone || c.email}</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground italic">No customers yet. Add your first lead.</div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Operations Activity Log */}
+              <Card className="rounded-3xl border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl">Activity Feed</CardTitle>
+                  <CardDescription>Recent actions and system updates.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {activitiesLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted" /></div>
+                  ) : activities && activities.length > 0 ? (
+                    activities.map((act: any, i) => (
+                      <div key={i} className="flex gap-4 relative">
+                        <div className="mt-1 w-2 h-2 rounded-full bg-accent shrink-0" />
+                        <div className="space-y-1 pb-4 border-b border-border/50 w-full last:border-0">
+                          <p className="text-sm font-bold text-primary">{act.type}</p>
+                          <p className="text-xs text-muted-foreground">{act.content}</p>
+                          <p className="text-[10px] text-muted-foreground/60">{new Date(act.timestamp?.toDate()).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground italic">No recent activity found.</div>
+                  )}
+                  {/* Mock Activity if empty */}
+                  {(!activities || activities.length === 0) && (
+                     <div className="space-y-4 opacity-50">
+                        <div className="flex gap-4">
+                           <Activity className="w-4 h-4" />
+                           <p className="text-sm">Welcome to LocalSphere Manager!</p>
+                        </div>
+                     </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </main>
