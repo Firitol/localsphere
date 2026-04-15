@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -35,33 +34,42 @@ service cloud.firestore {
 
     // Businesses
     match /businesses/{businessId} {
-      // Allow individual get by ID (ID often matches UID for new profiles)
+      // Allow individual get by ID
       allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       
       // Allow listing businesses based on ownership filter
       allow list: if isSignedIn() && (isStaff() || (request.query.limit <= 100 && request.query.filters.ownerUid == request.auth.uid));
       
-      // Allow creation if the ownerUid is the current user
+      // Allow creation
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       
-      // Allow updates by owner or staff
+      // Allow updates
       allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       
       allow delete: if isStaff();
 
       // CRM Customers subcollection
       match /customers/{customerId} {
-        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isBusinessOwner(businessId) || isStaff());
+        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.query.filters.ownerUid == request.auth.uid);
+        allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
+        allow create: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.resource.data.ownerUid == request.auth.uid);
+        allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
+        allow delete: if isSignedIn() && (businessId == request.auth.uid || isStaff());
       }
 
       // Activity Feed subcollection
       match /activities/{activityId} {
-        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isBusinessOwner(businessId) || isStaff());
+        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.query.filters.ownerUid == request.auth.uid);
+        allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
+        allow create: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.resource.data.ownerUid == request.auth.uid);
+        allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
+        allow delete: if isSignedIn() && (businessId == request.auth.uid || isStaff());
       }
 
       // Analytics/SEO Metrics subcollection
       match /seoMetrics/{metricId} {
-        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isBusinessOwner(businessId) || isStaff());
+        allow list, get: if isSignedIn() && (businessId == request.auth.uid || isStaff());
+        allow write: if isSignedIn() && (businessId == request.auth.uid || isStaff());
       }
     }
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navbar } from "@/components/layout/Navbar";
@@ -13,8 +12,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  LineChart,
-  Line,
   AreaChart,
   Area
 } from "recharts";
@@ -28,8 +25,8 @@ import {
   Calendar
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { collection, query, limit, orderBy } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { collection, query, limit, orderBy, where, onSnapshot } from "firebase/firestore";
 
 const mockPerformanceData = [
   { name: 'Mon', views: 400, clicks: 240, calls: 12 },
@@ -45,21 +42,33 @@ export default function AnalyticsPage() {
   const { user, loading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const [businessData, setBusinessData] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [user, loading, router]);
 
-  const businessId = "main-business";
+  useEffect(() => {
+    if (!user || !firestore) return;
+    const q = query(collection(firestore, "businesses"), where("ownerUid", "==", user.uid), limit(1));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setBusinessData({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+      }
+    });
+    return unsubscribe;
+  }, [user, firestore]);
+
+  const businessId = businessData?.id || user?.uid;
   
   const metricsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !businessId) return null;
     return query(
-      collection(firestore, "clients", "default-client", "businessProfiles", businessId, "seoMetrics"),
+      collection(firestore, "businesses", businessId, "seoMetrics"),
       orderBy("dateRecorded", "desc"),
       limit(30)
     );
-  }, [firestore]);
+  }, [firestore, businessId]);
 
   const { data: metrics, isLoading: metricsLoading } = useCollection(metricsQuery);
 
