@@ -2,578 +2,62 @@
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user within the LocalSphere system, including staff (admin, staff) and potentially clients accessing their portal.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the user, used for login and communication.",
-          "format": "email"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user within the system (e.g., 'admin', 'staff', 'client'), determining access levels."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the user account was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the user account was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "email",
-        "firstName",
-        "lastName",
-        "role",
-        "createdAt"
-      ]
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff", "client"] },
+        "ownerUid": { "type": "string" }
+      }
     },
-    "Client": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Client",
+    "Business": {
+      "title": "Business",
       "type": "object",
-      "description": "Represents a client organization or primary contact that LocalSphere provides services to.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Client entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User entity if the client has a login to the LocalSphere platform. (Relationship: User 1:N Client)"
-        },
-        "companyName": {
-          "type": "string",
-          "description": "The name of the client's organization or business."
-        },
-        "contactFirstName": {
-          "type": "string",
-          "description": "The first name of the primary contact person for the client."
-        },
-        "contactLastName": {
-          "type": "string",
-          "description": "The last name of the primary contact person for the client."
-        },
-        "contactEmail": {
-          "type": "string",
-          "description": "The email address of the primary contact person.",
-          "format": "email"
-        },
-        "contactPhone": {
-          "type": "string",
-          "description": "The phone number of the primary contact person."
-        },
-        "address": {
-          "type": "string",
-          "description": "The main street address of the client or contact person."
-        },
-        "city": {
-          "type": "string",
-          "description": "The city of the client's location."
-        },
-        "state": {
-          "type": "string",
-          "description": "The state or region of the client's location."
-        },
-        "zipCode": {
-          "type": "string",
-          "description": "The postal code of the client's location."
-        },
-        "country": {
-          "type": "string",
-          "description": "The country of the client's location."
-        },
-        "onboardingDate": {
-          "type": "string",
-          "description": "The date when the client was onboarded to LocalSphere's services.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the client relationship (e.g., 'active', 'onboarding', 'inactive')."
-        },
-        "notes": {
-          "type": "string",
-          "description": "General notes or remarks about the client."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the client record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the client record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "companyName",
-        "contactFirstName",
-        "contactLastName",
-        "contactEmail",
-        "onboardingDate",
-        "status",
-        "createdAt"
-      ]
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "category": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "website": { "type": "string" },
+        "description": { "type": "string" }
+      }
     },
-    "BusinessProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "BusinessProfile",
+    "Customer": {
+      "title": "Customer",
       "type": "object",
-      "description": "Represents a local business for which LocalSphere provides digital services, detailing its public-facing information and location.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the BusinessProfile entity."
-        },
-        "clientId": {
-          "type": "string",
-          "description": "Reference to the Client entity who owns or manages this business. (Relationship: Client 1:N BusinessProfile)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The official name of the business (e.g., 'Mama's Ethiopian Restaurant')."
-        },
-        "primaryCategory": {
-          "type": "string",
-          "description": "The main category describing the business (e.g., 'Restaurant', 'Hair Salon', 'Medical Clinic')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description or 'about us' for the business."
-        },
-        "address": {
-          "type": "string",
-          "description": "The physical street address of the business."
-        },
-        "city": {
-          "type": "string",
-          "description": "The city where the business is located."
-        },
-        "state": {
-          "type": "string",
-          "description": "The state or region where the business is located."
-        },
-        "zipCode": {
-          "type": "string",
-          "description": "The postal code of the business location."
-        },
-        "country": {
-          "type": "string",
-          "description": "The country where the business is located."
-        },
-        "phone": {
-          "type": "string",
-          "description": "The primary contact phone number for the business."
-        },
-        "websiteUrl": {
-          "type": "string",
-          "description": "The URL of the business's official website.",
-          "format": "uri"
-        },
-        "googleBusinessProfileUrl": {
-          "type": "string",
-          "description": "The URL of the business's Google Business Profile.",
-          "format": "uri"
-        },
-        "latitude": {
-          "type": "number",
-          "description": "The geographical latitude of the business location for map integration."
-        },
-        "longitude": {
-          "type": "number",
-          "description": "The geographical longitude of the business location for map integration."
-        },
-        "status": {
-          "type": "string",
-          "description": "The operational status of the business profile (e.g., 'active', 'paused', 'needs attention')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the business profile record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the business profile record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "clientId",
-        "name",
-        "address",
-        "city",
-        "country",
-        "createdAt"
-      ]
-    },
-    "ServiceOffering": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ServiceOffering",
-      "type": "object",
-      "description": "Defines the types of digital services that LocalSphere offers to its clients.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ServiceOffering entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the service (e.g., 'Google Business Profile Optimization', 'Basic Website Development')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of what the service includes."
-        },
-        "category": {
-          "type": "string",
-          "description": "The category of the service (e.g., 'SEO', 'Website', 'Content Marketing', 'Reputation Management')."
-        },
-        "oneTimeSetupFee": {
-          "type": "number",
-          "description": "The standard one-time setup fee for this service, if applicable."
-        },
-        "monthlySubscriptionFee": {
-          "type": "number",
-          "description": "The standard monthly subscription fee for this service, if applicable."
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "Indicates if the service offering is currently available for purchase."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the service offering was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the service offering was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "description",
-        "category",
-        "isActive",
-        "createdAt"
-      ]
-    },
-    "ClientService": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ClientService",
-      "type": "object",
-      "description": "Represents an active or historical instance of a ServiceOffering provided to a specific BusinessProfile.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ClientService entity."
-        },
-        "businessProfileId": {
-          "type": "string",
-          "description": "Reference to the BusinessProfile entity receiving this service. (Relationship: BusinessProfile 1:N ClientService)"
-        },
-        "serviceOfferingId": {
-          "type": "string",
-          "description": "Reference to the ServiceOffering entity that defines this service. (Relationship: ServiceOffering 1:N ClientService)"
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The date when the service officially started for the client.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "The projected or actual date when a subscription-based service is scheduled to end.",
-          "format": "date-time"
-        },
-        "actualSetupFee": {
-          "type": "number",
-          "description": "The actual one-time setup fee charged for this specific service instance."
-        },
-        "actualMonthlyFee": {
-          "type": "number",
-          "description": "The actual monthly fee charged for this specific service instance, if applicable."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of this service instance (e.g., 'active', 'in progress', 'completed', 'cancelled', 'paused')."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Specific notes, updates, or progress reports for this client service."
-        },
-        "assignedStaffId": {
-          "type": "string",
-          "description": "Reference to the User entity (staff member) assigned to manage or deliver this service. (Relationship: User 1:N ClientService)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the client service record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the client service record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "businessProfileId",
-        "serviceOfferingId",
-        "startDate",
-        "status",
-        "createdAt"
-      ]
-    },
-    "BusinessReview": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "BusinessReview",
-      "type": "object",
-      "description": "Stores information about reviews received by a BusinessProfile from various platforms.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the BusinessReview entity."
-        },
-        "businessProfileId": {
-          "type": "string",
-          "description": "Reference to the BusinessProfile this review belongs to. (Relationship: BusinessProfile 1:N BusinessReview)"
-        },
-        "platform": {
-          "type": "string",
-          "description": "The platform where the review was originally posted (e.g., 'Google', 'Facebook', 'Yelp')."
-        },
-        "reviewerName": {
-          "type": "string",
-          "description": "The name or username of the person who posted the review."
-        },
-        "rating": {
-          "type": "number",
-          "description": "The numerical rating given in the review (e.g., 1-5 stars)."
-        },
-        "comment": {
-          "type": "string",
-          "description": "The text content of the review comment."
-        },
-        "reviewDate": {
-          "type": "string",
-          "description": "The date and time when the review was posted.",
-          "format": "date-time"
-        },
-        "response": {
-          "type": "string",
-          "description": "The response provided by the business or LocalSphere to the review."
-        },
-        "sentiment": {
-          "type": "string",
-          "description": "The determined sentiment of the review (e.g., 'positive', 'negative', 'neutral')."
-        },
-        "isResponded": {
-          "type": "boolean",
-          "description": "Indicates whether a response has been made to this review."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the review record was created in the system (e.g., when it was fetched).",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the review record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "businessProfileId",
-        "platform",
-        "reviewerName",
-        "rating",
-        "reviewDate",
-        "createdAt"
-      ]
-    },
-    "SEOMetric": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SEOMetric",
-      "type": "object",
-      "description": "Records various SEO and online presence performance metrics for a BusinessProfile over time.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SEOMetric entity."
-        },
-        "businessProfileId": {
-          "type": "string",
-          "description": "Reference to the BusinessProfile this metric is associated with. (Relationship: BusinessProfile 1:N SEOMetric)"
-        },
-        "metricType": {
-          "type": "string",
-          "description": "The type of metric being recorded (e.g., 'Google Search Views', 'Google Map Views', 'Website Clicks', 'Direction Requests', 'Call Clicks', 'Keyword Ranking')."
-        },
-        "value": {
-          "type": "number",
-          "description": "The numerical value of the metric at the recorded date."
-        },
-        "dateRecorded": {
-          "type": "string",
-          "description": "The specific date or date-time when this metric value was recorded.",
-          "format": "date-time"
-        },
-        "source": {
-          "type": "string",
-          "description": "The source from which the metric data was obtained (e.g., 'Google Business Profile Insights', 'Google Analytics', 'Third-Party SEO Tool')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the metric record was created in the system.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the metric record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "businessProfileId",
-        "metricType",
-        "value",
-        "dateRecorded",
-        "source",
-        "createdAt"
-      ]
-    },
-    "Inquiry": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Inquiry",
-      "type": "object",
-      "description": "Represents a contact or service inquiry submitted via the public contact form.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Full name of the person inquiring."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the person inquiring.",
-          "format": "email"
-        },
-        "businessName": {
-          "type": "string",
-          "description": "Name of the business the inquiry is about."
-        },
-        "service": {
-          "type": "string",
-          "description": "The service they are interested in."
-        },
-        "message": {
-          "type": "string",
-          "description": "The detailed inquiry message."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the inquiry was submitted.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "name",
-        "email",
-        "businessName",
-        "service",
-        "message",
-        "createdAt"
-      ]
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "status": { "type": "string" }
+      }
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "google"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles and their roles within the LocalSphere system (admin, staff, client)."
-        }
-      },
-      {
-        "path": "/clients/{clientId}",
-        "definition": {
-          "entityName": "Client",
-          "schema": {
-            "$ref": "#/backend/entities/Client"
-          },
-          "description": "Represents client organizations."
-        }
-      },
-      {
-        "path": "/serviceOfferings/{serviceOfferingId}",
-        "definition": {
-          "entityName": "ServiceOffering",
-          "schema": {
-            "$ref": "#/backend/entities/ServiceOffering"
-          },
-          "description": "A global catalog of digital services offered by LocalSphere."
-        }
-      },
-      {
-        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}",
-        "definition": {
-          "entityName": "BusinessProfile",
-          "schema": {
-            "$ref": "#/backend/entities/BusinessProfile"
-          },
-          "description": "Details for a specific local business."
-        }
-      },
-      {
-        "path": "/inquiries/{inquiryId}",
-        "definition": {
-          "entityName": "Inquiry",
-          "schema": {
-            "$ref": "#/backend/entities/Inquiry"
-          },
-          "description": "Public inquiries submitted through the contact form. Write-only for public, read/manage for staff."
-        }
-      }
-    ]
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles and roles."
+    },
+    "/businesses/{businessId}": {
+      "schema": { "$ref": "#/entities/Business" },
+      "description": "Core business profiles."
+    },
+    "/businesses/{businessId}/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Customer CRM records."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": { "$ref": "#/entities/Inquiry" },
+      "description": "Public service inquiries."
+    }
   }
 }

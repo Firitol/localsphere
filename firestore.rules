@@ -3,95 +3,46 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * Core Philosophy:
-     * This ruleset implements a robust, multi-tenant security model for LocalSphere. It relies heavily on 
-     * 'Authorization Independence' via denormalization. By copying ownership identifiers (like clientOwnerUserId) 
-     * down the document hierarchy, we ensure that every security decision can be made using only the 
-     * document's own data (resource.data), avoiding slow and expensive cross-document lookups (get() calls).
-     */
-
-    // --- HELPER FUNCTIONS ---
-
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function hasRole(role) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    function isOwner(data) {
+      return isSignedIn() && data.ownerUid == request.auth.uid;
     }
 
     function isStaff() {
-      return hasRole('staff') || hasRole('admin');
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
-
-    function isDocClientOwner(data) {
-      return isSignedIn() && (data.clientOwnerUserId == request.auth.uid || data.userId == request.auth.uid);
-    }
-
-    function isExistingClientOwner(data) {
-      return resource != null && (isDocClientOwner(data) || isStaff());
-    }
-
-    // --- COLLECTION RULES ---
 
     match /users/{userId} {
-      allow get: if isOwner(userId) || isStaff();
-      allow list: if isOwner(userId) || isStaff();
-      allow create: if isOwner(userId);
-      allow update: if (isOwner(userId) || isStaff()) && resource != null;
-      allow delete: if isStaff() && resource != null;
+      allow get: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isStaff());
     }
 
-    match /clients/{clientId} {
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaff());
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isStaff());
-      allow update: if isExistingClientOwner(resource.data) && (request.resource.data.userId == resource.data.userId);
-      allow delete: if isStaff() && resource != null;
+    match /businesses/{businessId} {
+      allow get: if isSignedIn() && (isOwner(resource.data) || isStaff());
+      allow list: if isSignedIn(); // Queries must include where("ownerUid", "==", request.auth.uid)
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isOwner(resource.data) || isStaff());
+      allow delete: if isStaff();
 
-      match /businessProfiles/{businessProfileId} {
-        allow get: if isSignedIn() && (resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-        allow list: if isSignedIn();
-        allow create: if isSignedIn() && (request.resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-        allow update: if isExistingClientOwner(resource.data) && (request.resource.data.clientOwnerUserId == resource.data.clientOwnerUserId);
-        allow delete: if isStaff() && resource != null;
-
-        match /clientServices/{id} {
-          allow get, list: if isSignedIn() && (resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-          allow create: if isSignedIn() && (request.resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-          allow update: if isExistingClientOwner(resource.data) && (request.resource.data.clientOwnerUserId == resource.data.clientOwnerUserId);
-          allow delete: if isStaff() && resource != null;
-        }
-
-        match /businessReviews/{id} {
-          allow get, list: if isSignedIn() && (resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-          allow create: if isSignedIn() && (request.resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-          allow update: if isExistingClientOwner(resource.data) && (request.resource.data.clientOwnerUserId == resource.data.clientOwnerUserId);
-          allow delete: if isStaff() && resource != null;
-        }
-
-        match /seoMetrics/{id} {
-          allow get, list: if isSignedIn() && (resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-          allow create: if isSignedIn() && (request.resource.data.clientOwnerUserId == request.auth.uid || isStaff());
-          allow update: if isExistingClientOwner(resource.data) && (request.resource.data.clientOwnerUserId == resource.data.clientOwnerUserId);
-          allow delete: if isStaff() && resource != null;
-        }
+      // Authorization Independence: Subcollections check their own ownerUid field
+      match /{allSubcollections=**} {
+        allow read, write: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isStaff());
+        allow create: if isSignedIn();
       }
     }
 
-    match /serviceOfferings/{serviceOfferingId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isStaff();
+    match /serviceOfferings/{id} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
     }
 
-    match /inquiries/{inquiryId} {
-      allow create: if true; // Public contact form submission
-      allow get, list, update, delete: if isStaff(); // Managed by staff
+    match /inquiries/{id} {
+      allow create: if true;
+      allow read, write: if isStaff();
     }
   }
 }

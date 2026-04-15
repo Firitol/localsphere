@@ -14,16 +14,17 @@ import {
   TrendingUp, 
   PlusCircle, 
   ChevronRight,
-  Activity,
   BarChart3,
   Crown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { collection, query, limit, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, limit, orderBy, onSnapshot, where } from "firebase/firestore";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function DashboardPage() {
   const { user, isUserLoading: loading } = useUser();
@@ -39,24 +40,51 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user || !firestore) return;
-    const q = query(collection(firestore, "businesses"), limit(1));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        setBusinessData({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+    
+    // Filter by ownerUid to comply with security rules
+    const q = query(
+      collection(firestore, "businesses"), 
+      where("ownerUid", "==", user.uid),
+      limit(1)
+    );
+
+    const unsubscribe = onSnapshot(
+      q, 
+      (snapshot) => {
+        if (!snapshot.empty) {
+          setBusinessData({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+        }
+      },
+      async (error) => {
+        const contextualError = new FirestorePermissionError({
+          path: 'businesses',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', contextualError);
       }
-    });
-    return unsubscribe;
+    );
+    return () => unsubscribe();
   }, [user, firestore]);
 
   const customersQuery = useMemoFirebase(() => {
-    if (!firestore || !businessData) return null;
-    return query(collection(firestore, "businesses", businessData.id, "customers"), limit(5), orderBy("createdAt", "desc"));
-  }, [firestore, businessData]);
+    if (!firestore || !businessData || !user) return null;
+    return query(
+      collection(firestore, "businesses", businessData.id, "customers"), 
+      where("ownerUid", "==", user.uid),
+      orderBy("createdAt", "desc"),
+      limit(5)
+    );
+  }, [firestore, businessData, user]);
 
   const activitiesQuery = useMemoFirebase(() => {
-    if (!firestore || !businessData) return null;
-    return query(collection(firestore, "businesses", businessData.id, "activities"), limit(5), orderBy("timestamp", "desc"));
-  }, [firestore, businessData]);
+    if (!firestore || !businessData || !user) return null;
+    return query(
+      collection(firestore, "businesses", businessData.id, "activities"), 
+      where("ownerUid", "==", user.uid),
+      orderBy("timestamp", "desc"),
+      limit(5)
+    );
+  }, [firestore, businessData, user]);
 
   const { data: customers, isLoading: customersLoading } = useCollection(customersQuery);
   const { data: activities, isLoading: activitiesLoading } = useCollection(activitiesQuery);
@@ -130,7 +158,7 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {[
-                { label: "Total Customers", value: customers?.length || "0", sub: "+2 this week", icon: Users },
+                { label: "Total Customers", value: customers?.length || "0", sub: "Active leads", icon: Users },
                 { label: "Google Visibility", value: "Optimal", sub: "Verified status", icon: Globe },
                 { label: "Efficiency Score", value: "94%", sub: "High Performance", icon: TrendingUp },
               ].map((stat, idx) => (
@@ -218,4 +246,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

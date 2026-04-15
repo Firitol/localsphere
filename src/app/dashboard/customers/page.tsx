@@ -21,9 +21,11 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { collection, query, addDoc, serverTimestamp, orderBy, limit } from "firebase/firestore";
+import { collection, query, addDoc, serverTimestamp, orderBy, limit, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function CustomersPage() {
   const { user, loading } = useUser();
@@ -33,21 +35,31 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [businessId, setBusinessId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [user, loading, router]);
 
-  const businessId = "main-business"; // In a real app, this would come from user profile
+  // Find user's business
+  useEffect(() => {
+    if (!user || !firestore) return;
+    const q = query(collection(firestore, "businesses"), where("ownerUid", "==", user.uid), limit(1));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) setBusinessId(snapshot.docs[0].id);
+    });
+    return unsubscribe;
+  }, [user, firestore]);
 
   const customersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !businessId || !user) return null;
     return query(
       collection(firestore, "businesses", businessId, "customers"), 
+      where("ownerUid", "==", user.uid),
       orderBy("createdAt", "desc"),
       limit(50)
     );
-  }, [firestore]);
+  }, [firestore, businessId, user]);
 
   const { data: customers, isLoading: customersLoading } = useCollection(customersQuery);
 
@@ -58,6 +70,7 @@ export default function CustomersPage() {
 
   const handleAddCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user || !businessId) return;
     setAddLoading(true);
     const formData = new FormData(e.currentTarget);
     
@@ -67,25 +80,32 @@ export default function CustomersPage() {
       phone: formData.get("phone"),
       notes: formData.get("notes"),
       status: "lead",
+      ownerUid: user.uid, // Required for Authorization Independence
       createdAt: serverTimestamp(),
     };
 
-    try {
-      await addDoc(collection(firestore!, "businesses", businessId, "customers"), customerData);
-      // Log activity
-      await addDoc(collection(firestore!, "businesses", businessId, "activities"), {
-        type: "Customer Added",
-        content: `New customer ${customerData.name} was added to the CRM.`,
-        timestamp: serverTimestamp()
-      });
+    const customersRef = collection(firestore!, "businesses", businessId, "customers");
 
-      toast({ title: "Customer Added", description: "The record has been created successfully." });
-      setIsAddOpen(false);
-    } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to add customer." });
-    } finally {
-      setAddLoading(false);
-    }
+    addDoc(customersRef, customerData)
+      .then(() => {
+        addDoc(collection(firestore!, "businesses", businessId, "activities"), {
+          type: "Customer Added",
+          content: `New customer ${customerData.name} was added to the CRM.`,
+          ownerUid: user.uid,
+          timestamp: serverTimestamp()
+        });
+        toast({ title: "Customer Added", description: "The record has been created successfully." });
+        setIsAddOpen(false);
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: customersRef.path,
+          operation: 'create',
+          requestResourceData: customerData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setAddLoading(false));
   };
 
   if (loading || !user) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
