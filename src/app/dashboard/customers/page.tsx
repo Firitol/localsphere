@@ -21,14 +21,14 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { collection, query, addDoc, serverTimestamp, orderBy, limit, where } from "firebase/firestore";
+import { collection, query, addDoc, serverTimestamp, orderBy, limit, where, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function CustomersPage() {
-  const { user, loading } = useUser();
+  const { user, isUserLoading: loading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -44,9 +44,22 @@ export default function CustomersPage() {
   // Find user's business
   useEffect(() => {
     if (!user || !firestore) return;
-    const q = query(collection(firestore, "businesses"), where("ownerUid", "==", user.uid), limit(1));
+    const q = query(
+      collection(firestore, "businesses"), 
+      where("ownerUid", "==", user.uid), 
+      limit(1)
+    );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) setBusinessId(snapshot.docs[0].id);
+      if (!snapshot.empty) {
+        setBusinessId(snapshot.docs[0].id);
+      }
+    }, (error) => {
+      const contextualError = new FirestorePermissionError({
+        path: 'businesses',
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', contextualError);
     });
     return unsubscribe;
   }, [user, firestore]);
@@ -70,7 +83,17 @@ export default function CustomersPage() {
 
   const handleAddCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user || !businessId) return;
+    if (!user || !firestore) return;
+
+    if (!businessId) {
+      toast({
+        variant: "destructive",
+        title: "Setup Required",
+        description: "Please complete your Business Profile first so we know where to save your customers.",
+      });
+      return;
+    }
+
     setAddLoading(true);
     const formData = new FormData(e.currentTarget);
     
@@ -80,15 +103,15 @@ export default function CustomersPage() {
       phone: formData.get("phone"),
       notes: formData.get("notes"),
       status: "lead",
-      ownerUid: user.uid, // Required for Authorization Independence
+      ownerUid: user.uid,
       createdAt: serverTimestamp(),
     };
 
-    const customersRef = collection(firestore!, "businesses", businessId, "customers");
+    const customersRef = collection(firestore, "businesses", businessId, "customers");
 
     addDoc(customersRef, customerData)
       .then(() => {
-        addDoc(collection(firestore!, "businesses", businessId, "activities"), {
+        addDoc(collection(firestore, "businesses", businessId, "activities"), {
           type: "Customer Added",
           content: `New customer ${customerData.name} was added to the CRM.`,
           ownerUid: user.uid,
@@ -108,7 +131,7 @@ export default function CustomersPage() {
       .finally(() => setAddLoading(false));
   };
 
-  if (loading || !user) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (loading || !user) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen flex flex-col bg-accent/5">
@@ -124,7 +147,7 @@ export default function CustomersPage() {
           
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button className="rounded-xl px-6 py-6 shadow-lg bg-primary hover:bg-primary/90">
+              <Button className="rounded-xl px-6 py-6 shadow-lg bg-primary hover:bg-primary/90" disabled={!businessId}>
                 <UserPlus className="w-5 h-5 mr-2" /> Add Customer
               </Button>
             </DialogTrigger>
@@ -162,6 +185,17 @@ export default function CustomersPage() {
           </Dialog>
         </div>
 
+        {!businessId && !customersLoading && (
+          <Card className="mb-8 border-dashed border-2 bg-yellow-50 border-yellow-200 rounded-3xl">
+            <CardContent className="p-6 text-center space-y-4">
+              <p className="text-yellow-800 font-medium">To start adding customers, you first need to set up your Business Profile.</p>
+              <Button onClick={() => router.push('/dashboard/business')} variant="outline" className="rounded-xl">
+                Go to Business Profile
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="rounded-3xl border-none shadow-sm mb-8">
           <CardHeader className="p-6 border-b">
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
@@ -193,7 +227,7 @@ export default function CustomersPage() {
                 </thead>
                 <tbody className="divide-y">
                   {customersLoading ? (
-                    <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="animate-spin inline" /></td></tr>
+                    <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="animate-spin inline text-primary" /></td></tr>
                   ) : filteredCustomers.length > 0 ? (
                     filteredCustomers.map((c, i) => (
                       <tr key={i} className="hover:bg-accent/5 transition-colors group">

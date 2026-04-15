@@ -21,27 +21,48 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { doc, setDoc, serverTimestamp, collection, addDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, addDoc, query, where, limit, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { GbpContentGenerator } from "@/components/tools/GbpContentGenerator";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function BusinessProfilePage() {
-  const { user, loading } = useUser();
+  const { user, isUserLoading: loading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [saveLoading, setSaveLoading] = useState(false);
+  const [businessId, setBusinessId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [user, loading, router]);
 
-  const businessId = "main-business"; // Mocking association
-  const businessRef = useMemoFirebase(() => firestore ? doc(firestore, "businesses", businessId) : null, [firestore]);
+  // Find or determine the business ID for this user
+  useEffect(() => {
+    if (!user || !firestore) return;
+    
+    // Attempt to find existing business
+    const q = query(collection(firestore, "businesses"), where("ownerUid", "==", user.uid), limit(1));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setBusinessId(snapshot.docs[0].id);
+      } else {
+        // Fallback to user UID as the business ID for a new profile
+        setBusinessId(user.uid);
+      }
+    });
+    return unsubscribe;
+  }, [user, firestore]);
+
+  const businessRef = useMemoFirebase(() => (firestore && businessId) ? doc(firestore, "businesses", businessId) : null, [firestore, businessId]);
   const { data: business, isLoading: businessLoading } = useDoc<any>(businessRef);
 
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user || !firestore || !businessId) return;
+
     setSaveLoading(true);
     const formData = new FormData(e.currentTarget);
     
@@ -53,26 +74,33 @@ export default function BusinessProfilePage() {
       description: formData.get("description"),
       website: formData.get("website"),
       updatedAt: serverTimestamp(),
-      ownerUid: user?.uid,
+      ownerUid: user.uid,
     };
 
-    try {
-      await setDoc(doc(firestore!, "businesses", businessId), data, { merge: true });
-      // Log activity
-      await addDoc(collection(firestore!, "businesses", businessId, "activities"), {
-        type: "Profile Updated",
-        content: "Core business information was updated.",
-        timestamp: serverTimestamp()
-      });
-      toast({ title: "Profile Saved", description: "Business details updated successfully." });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to save profile." });
-    } finally {
-      setSaveLoading(false);
-    }
+    const docRef = doc(firestore, "businesses", businessId);
+
+    setDoc(docRef, data, { merge: true })
+      .then(() => {
+        addDoc(collection(firestore, "businesses", businessId, "activities"), {
+          type: "Profile Updated",
+          content: "Core business information was updated.",
+          ownerUid: user.uid,
+          timestamp: serverTimestamp()
+        });
+        toast({ title: "Profile Saved", description: "Business details updated successfully." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'write',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSaveLoading(false));
   };
 
-  if (loading || !user || businessLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (loading || !user || businessLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen flex flex-col bg-accent/5">
@@ -103,7 +131,7 @@ export default function BusinessProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Business Name</label>
-                      <Input name="name" defaultValue={business?.name} required />
+                      <Input name="name" defaultValue={business?.name} required placeholder="Your Business Name" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Category</label>
@@ -115,7 +143,7 @@ export default function BusinessProfilePage() {
                     <label className="text-sm font-medium">Physical Address</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input name="address" className="pl-10" defaultValue={business?.address} />
+                      <Input name="address" className="pl-10" defaultValue={business?.address} placeholder="123 Main St, City, Country" />
                     </div>
                   </div>
 
@@ -124,21 +152,21 @@ export default function BusinessProfilePage() {
                       <label className="text-sm font-medium">Business Phone</label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input name="phone" className="pl-10" defaultValue={business?.phone} />
+                        <Input name="phone" className="pl-10" defaultValue={business?.phone} placeholder="+1 234 567 890" />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Website URL</label>
                       <div className="relative">
                         <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input name="website" className="pl-10" defaultValue={business?.website} />
+                        <Input name="website" className="pl-10" defaultValue={business?.website} placeholder="https://example.com" />
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Business Description</label>
-                    <Textarea name="description" className="min-h-[120px]" defaultValue={business?.description} />
+                    <Textarea name="description" className="min-h-[120px]" defaultValue={business?.description} placeholder="Describe your services and value..." />
                   </div>
 
                   <Button type="submit" className="w-full py-7 text-lg rounded-2xl shadow-lg" disabled={saveLoading}>
@@ -168,16 +196,16 @@ export default function BusinessProfilePage() {
                <CardContent className="space-y-4">
                   <div className="p-4 bg-white/10 rounded-2xl space-y-2">
                      <p className="text-sm font-bold opacity-80 uppercase tracking-widest">Google Maps</p>
-                     <p className="text-xl font-bold">Verified & Active</p>
+                     <p className="text-xl font-bold">{business?.name ? 'Verified & Active' : 'Setup Required'}</p>
                   </div>
                   <div className="p-4 bg-white/10 rounded-2xl space-y-2">
                      <p className="text-sm font-bold opacity-80 uppercase tracking-widest">Visibility Score</p>
-                     <p className="text-xl font-bold">High (84%)</p>
+                     <p className="text-xl font-bold">{business?.name ? '84%' : '0%'}</p>
                   </div>
                   <div className="p-4 bg-white/10 rounded-2xl space-y-2">
                      <p className="text-sm font-bold opacity-80 uppercase tracking-widest">Profile Completeness</p>
                      <div className="w-full bg-white/20 h-2 rounded-full mt-2">
-                        <div className="bg-accent w-[92%] h-full rounded-full" />
+                        <div className={`bg-accent h-full rounded-full transition-all duration-500 ${business?.name ? 'w-[92%]' : 'w-[10%]'}`} />
                      </div>
                   </div>
                </CardContent>
