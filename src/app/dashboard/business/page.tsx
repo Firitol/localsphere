@@ -3,7 +3,7 @@
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useUser, useFirestore, useDoc } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,8 +37,8 @@ export default function BusinessProfilePage() {
   }, [user, loading, router]);
 
   const businessId = "main-business"; // Mocking association
-  const businessRef = firestore ? doc(firestore, "businesses", businessId) : null;
-  const { data: business, loading: businessLoading } = useDoc<any>(businessRef);
+  const businessRef = useMemoFirebase(() => firestore ? doc(firestore, "businesses", businessId) : null, [firestore]);
+  const { data: business, isLoading: businessLoading } = useDoc<any>(businessRef);
 
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -57,9 +57,9 @@ export default function BusinessProfilePage() {
     };
 
     try {
-      await setDoc(doc(firestore, "businesses", businessId), data, { merge: true });
+      await setDoc(doc(firestore!, "businesses", businessId), data, { merge: true });
       // Log activity
-      await addDoc(collection(firestore, "businesses", businessId, "activities"), {
+      await addDoc(collection(firestore!, "businesses", businessId, "activities"), {
         type: "Profile Updated",
         content: "Core business information was updated.",
         timestamp: serverTimestamp()

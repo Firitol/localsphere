@@ -3,7 +3,7 @@
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,8 @@ import {
   UserPlus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { collection, query, addDoc, serverTimestamp, orderBy, where, limit } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { collection, query, addDoc, serverTimestamp, orderBy, limit } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
@@ -40,7 +40,7 @@ export default function CustomersPage() {
 
   const businessId = "main-business"; // In a real app, this would come from user profile
 
-  const customersQuery = useMemo(() => {
+  const customersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, "businesses", businessId, "customers"), 
@@ -49,15 +49,12 @@ export default function CustomersPage() {
     );
   }, [firestore]);
 
-  const { data: customers, loading: customersLoading } = useCollection(customersQuery);
+  const { data: customers, isLoading: customersLoading } = useCollection(customersQuery);
 
-  const filteredCustomers = useMemo(() => {
-    if (!customers) return [];
-    return customers.filter(c => 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [customers, searchTerm]);
+  const filteredCustomers = (customers || []).filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   const handleAddCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,9 +71,9 @@ export default function CustomersPage() {
     };
 
     try {
-      await addDoc(collection(firestore, "businesses", businessId, "customers"), customerData);
+      await addDoc(collection(firestore!, "businesses", businessId, "customers"), customerData);
       // Log activity
-      await addDoc(collection(firestore, "businesses", businessId, "activities"), {
+      await addDoc(collection(firestore!, "businesses", businessId, "activities"), {
         type: "Customer Added",
         content: `New customer ${customerData.name} was added to the CRM.`,
         timestamp: serverTimestamp()
@@ -200,7 +197,7 @@ export default function CustomersPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">
-                          {c.createdAt?.toDate().toLocaleDateString()}
+                          {c.createdAt?.toDate ? c.createdAt.toDate().toLocaleDateString() : 'N/A'}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Button variant="ghost" size="icon" className="rounded-full">

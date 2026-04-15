@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import {
   Crown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { collection, query, limit, orderBy, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
@@ -47,18 +47,18 @@ export default function DashboardPage() {
     return unsubscribe;
   }, [user, firestore]);
 
-  const customersQuery = useMemo(() => {
+  const customersQuery = useMemoFirebase(() => {
     if (!firestore || !businessData) return null;
     return query(collection(firestore, "businesses", businessData.id, "customers"), limit(5), orderBy("createdAt", "desc"));
   }, [firestore, businessData]);
 
-  const activitiesQuery = useMemo(() => {
+  const activitiesQuery = useMemoFirebase(() => {
     if (!firestore || !businessData) return null;
     return query(collection(firestore, "businesses", businessData.id, "activities"), limit(5), orderBy("timestamp", "desc"));
   }, [firestore, businessData]);
 
-  const { data: customers, loading: customersLoading } = useCollection(customersQuery);
-  const { data: activities, loading: activitiesLoading } = useCollection(activitiesQuery);
+  const { data: customers, isLoading: customersLoading } = useCollection(customersQuery);
+  const { data: activities, isLoading: activitiesLoading } = useCollection(activitiesQuery);
 
   if (loading || !user) {
     return (
@@ -196,7 +196,9 @@ export default function DashboardPage() {
                         <div className="space-y-1 pb-4 border-b border-border/50 w-full last:border-0">
                           <div className="flex justify-between">
                             <p className="text-sm font-bold text-primary">{act.type}</p>
-                            <p className="text-[10px] text-muted-foreground/60">{new Date(act.timestamp?.toDate()).toLocaleTimeString()}</p>
+                            <p className="text-[10px] text-muted-foreground/60">
+                              {act.timestamp?.toDate() ? new Date(act.timestamp.toDate()).toLocaleTimeString() : 'Just now'}
+                            </p>
                           </div>
                           <p className="text-xs text-muted-foreground">{act.content}</p>
                         </div>

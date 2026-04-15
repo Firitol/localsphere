@@ -3,7 +3,7 @@
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { 
   BarChart, 
@@ -28,7 +28,7 @@ import {
   Calendar
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { collection, query, limit, orderBy } from "firebase/firestore";
 
 const mockPerformanceData = [
@@ -52,7 +52,7 @@ export default function AnalyticsPage() {
 
   const businessId = "main-business";
   
-  const metricsQuery = useMemo(() => {
+  const metricsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, "clients", "default-client", "businessProfiles", businessId, "seoMetrics"),
