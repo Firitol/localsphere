@@ -23,9 +23,10 @@ import { useEffect, useState } from "react";
 import { collection, query, limit, orderBy, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 export default function DashboardPage() {
-  const { user, loading } = useUser();
+  const { user, isUserLoading: loading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const [businessData, setBusinessData] = useState<any>(null);
@@ -197,7 +198,7 @@ export default function DashboardPage() {
                           <div className="flex justify-between">
                             <p className="text-sm font-bold text-primary">{act.type}</p>
                             <p className="text-[10px] text-muted-foreground/60">
-                              {act.timestamp?.toDate() ? new Date(act.timestamp.toDate()).toLocaleTimeString() : 'Just now'}
+                              {act.timestamp?.toDate ? new Date(act.timestamp.toDate()).toLocaleTimeString() : 'Just now'}
                             </p>
                           </div>
                           <p className="text-xs text-muted-foreground">{act.content}</p>
@@ -217,3 +218,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
