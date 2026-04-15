@@ -17,14 +17,6 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
 
-    function isBusinessOwner(businessId) {
-      return isSignedIn() && (
-        businessId == request.auth.uid || 
-        (exists(/databases/$(database)/documents/businesses/$(businessId)) && 
-         get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid)
-      );
-    }
-
     // User profiles
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isStaff());
@@ -34,11 +26,11 @@ service cloud.firestore {
 
     // Businesses
     match /businesses/{businessId} {
-      // Allow individual get by ID
+      // Allow individual get by ID if user is owner or ID matches UID
       allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       
-      // Allow listing businesses based on ownership filter
-      allow list: if isSignedIn() && (isStaff() || (request.query.limit <= 100 && request.query.filters.ownerUid == request.auth.uid));
+      // Allow listing businesses if user owns them
+      allow list: if isSignedIn() && (isStaff() || resource.data.ownerUid == request.auth.uid);
       
       // Allow creation
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
@@ -50,7 +42,7 @@ service cloud.firestore {
 
       // CRM Customers subcollection
       match /customers/{customerId} {
-        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.query.filters.ownerUid == request.auth.uid);
+        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || resource.data.ownerUid == request.auth.uid);
         allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
         allow create: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.resource.data.ownerUid == request.auth.uid);
         allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
@@ -59,7 +51,7 @@ service cloud.firestore {
 
       // Activity Feed subcollection
       match /activities/{activityId} {
-        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.query.filters.ownerUid == request.auth.uid);
+        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || resource.data.ownerUid == request.auth.uid);
         allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
         allow create: if isSignedIn() && (businessId == request.auth.uid || isStaff() || request.resource.data.ownerUid == request.auth.uid);
         allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
@@ -68,7 +60,8 @@ service cloud.firestore {
 
       // Analytics/SEO Metrics subcollection
       match /seoMetrics/{metricId} {
-        allow list, get: if isSignedIn() && (businessId == request.auth.uid || isStaff());
+        allow list: if isSignedIn() && (businessId == request.auth.uid || isStaff() || resource.data.ownerUid == request.auth.uid);
+        allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
         allow write: if isSignedIn() && (businessId == request.auth.uid || isStaff());
       }
     }
