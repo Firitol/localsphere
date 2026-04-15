@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -471,6 +472,48 @@
         "source",
         "createdAt"
       ]
+    },
+    "Inquiry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Inquiry",
+      "type": "object",
+      "description": "Represents a contact or service inquiry submitted via the public contact form.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the person inquiring."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the person inquiring.",
+          "format": "email"
+        },
+        "businessName": {
+          "type": "string",
+          "description": "Name of the business the inquiry is about."
+        },
+        "service": {
+          "type": "string",
+          "description": "The service they are interested in."
+        },
+        "message": {
+          "type": "string",
+          "description": "The detailed inquiry message."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the inquiry was submitted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "businessName",
+        "service",
+        "message",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -488,7 +531,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles and their roles within the LocalSphere system (admin, staff, client). The document ID ({userId}) must match `request.auth.uid`. User roles are managed here for DBAC. No further denormalization for authorization needed as this is the root of identity."
+          "description": "Stores user profiles and their roles within the LocalSphere system (admin, staff, client)."
         }
       },
       {
@@ -498,7 +541,7 @@
           "schema": {
             "$ref": "#/backend/entities/Client"
           },
-          "description": "Represents client organizations. Documents include a 'userId' field, which is the Firebase Auth UID of the primary client user associated with this organization. This 'userId' is critical for authorization independence, allowing client users to directly manage their own client record and associated data without `get()` calls on parent user profiles."
+          "description": "Represents client organizations."
         }
       },
       {
@@ -508,7 +551,7 @@
           "schema": {
             "$ref": "#/backend/entities/ServiceOffering"
           },
-          "description": "A global catalog of digital services offered by LocalSphere. Accessible read-only by all authenticated users (clients, staff, admin) to view available services, with write access restricted to staff and admin roles. No denormalized authorization fields are required as it's a public catalog with role-based write access."
+          "description": "A global catalog of digital services offered by LocalSphere."
         }
       },
       {
@@ -518,92 +561,19 @@
           "schema": {
             "$ref": "#/backend/entities/BusinessProfile"
           },
-          "description": "Details for a specific local business. This document includes denormalized 'clientId' (from its parent Client) and 'clientOwnerUserId' (copied from the parent Client's 'userId') for authorization independence. This enables client users to access their specific business profiles without a security rule `get()` call to the parent Client document, supporting efficient QAPs.",
-          "params": [
-            {
-              "name": "clientId",
-              "description": "The unique identifier of the parent Client organization."
-            },
-            {
-              "name": "businessProfileId",
-              "description": "The unique identifier of the Business Profile."
-            }
-          ]
+          "description": "Details for a specific local business."
         }
       },
       {
-        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}/clientServices/{clientServiceId}",
+        "path": "/inquiries/{inquiryId}",
         "definition": {
-          "entityName": "ClientService",
+          "entityName": "Inquiry",
           "schema": {
-            "$ref": "#/backend/entities/ClientService"
+            "$ref": "#/backend/entities/Inquiry"
           },
-          "description": "Records an instance of a service provided to a specific Business Profile. This document includes denormalized 'clientId' (from its grandparent Client) and 'clientOwnerUserId' (copied from the grandparent Client's 'userId' via BusinessProfile) for authorization independence. This allows direct authorization checks and QAPs without `get()` calls.",
-          "params": [
-            {
-              "name": "clientId",
-              "description": "The unique identifier of the grandparent Client organization."
-            },
-            {
-              "name": "businessProfileId",
-              "description": "The unique identifier of the parent Business Profile."
-            },
-            {
-              "name": "clientServiceId",
-              "description": "The unique identifier of the Client Service instance."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}/businessReviews/{businessReviewId}",
-        "definition": {
-          "entityName": "BusinessReview",
-          "schema": {
-            "$ref": "#/backend/entities/BusinessReview"
-          },
-          "description": "Stores reviews for a Business Profile. This document includes denormalized 'clientId' (from its grandparent Client) and 'clientOwnerUserId' (copied from the grandparent Client's 'userId' via BusinessProfile) for authorization independence. This allows direct authorization checks and QAPs without `get()` calls.",
-          "params": [
-            {
-              "name": "clientId",
-              "description": "The unique identifier of the grandparent Client organization."
-            },
-            {
-              "name": "businessProfileId",
-              "description": "The unique identifier of the parent Business Profile."
-            },
-            {
-              "name": "businessReviewId",
-              "description": "The unique identifier of the Business Review."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/clients/{clientId}/businessProfiles/{businessProfileId}/seoMetrics/{seoMetricId}",
-        "definition": {
-          "entityName": "SEOMetric",
-          "schema": {
-            "$ref": "#/backend/entities/SEOMetric"
-          },
-          "description": "Records SEO performance metrics for a Business Profile. This document includes denormalized 'clientId' (from its grandparent Client) and 'clientOwnerUserId' (copied from the grandparent Client's 'userId' via BusinessProfile) for authorization independence. This allows direct authorization checks and QAPs without `get()` calls.",
-          "params": [
-            {
-              "name": "clientId",
-              "description": "The unique identifier of the grandparent Client organization."
-            },
-            {
-              "name": "businessProfileId",
-              "description": "The unique identifier of the parent Business Profile."
-            },
-            {
-              "name": "seoMetricId",
-              "description": "The unique identifier of the SEO Metric."
-            }
-          ]
+          "description": "Public inquiries submitted through the contact form. Write-only for public, read/manage for staff."
         }
       }
-    ],
-    "reasoning": "The Firestore structure for LocalSphere Digital Services is designed with a strong emphasis on Authorization Independence, Structural Segregation, and Access Modeling to ensure robust security, scalability, and debuggability. \n\n**Authorization Independence (Denormalization Strategy):**\n\nTo eliminate the need for `get()` calls in Firestore Security Rules and enable atomic operations, key authorization fields are denormalized downwards through the hierarchy:\n\n1.  **Client-Level Ownership:** The `Client` document (`/clients/{clientId}`) contains a `userId` field, linking the client organization to a specific Firebase Authentication UID. This directly enables authorization for individual client users accessing their own client organization's data.\n2.  **BusinessProfile Denormalization:** Each `BusinessProfile` document (nested under a `Client` at `/clients/{clientId}/businessProfiles/{businessProfileId}`) will explicitly denormalize `clientId` (from its parent) and, crucially, `clientOwnerUserId` (copied from the `userId` field of the grandparent `Client` document). This allows rules for `BusinessProfile` documents to directly compare `request.auth.uid` with `resource.data.clientOwnerUserId` without fetching the parent `Client` document.\n3.  **Subcollection Denormalization:** For `ClientService`, `BusinessReview`, and `SEOMetric` documents (nested under `BusinessProfile`), `businessProfileId` (from parent), `clientId` (from grandparent), and `clientOwnerUserId` (from great-grandparent `Client` via `BusinessProfile`) will be denormalized. This ensures that authorization checks for any document in these deepest subcollections can be performed solely on the `resource.data` of the document itself, making rules extremely efficient and independent of parent documents.\n\n**QAPs (Rules are not Filters) Support:**\n\nThe denormalization strategy directly supports Queryable Access Patterns (QAPs) by allowing secure `list` operations:\n\n*   **Client User Access:** When a client user needs to list their `BusinessProfile`s, `ClientService`s, `BusinessReview`s, or `SEOMetric`s, they can perform queries like `db.collectionGroup('businessProfiles').where('clientOwnerUserId', '==', request.auth.uid).get()`. The security rules can then directly validate `resource.data.clientOwnerUserId == request.auth.uid`, ensuring that only documents owned by the authenticated user are returned, without needing to filter on the client-side or perform expensive `get()` calls in rules.\n*   **Staff/Admin Access:** Staff and admin users (identified by their `role` in `/users/{userId}`) will have broader access to all data, enabled by checking `request.auth.uid` against a dedicated `/roles_admin/{uid}` or `resource.data.role` (if `User.role` is authoritative), and can query across collections as needed.\n\n**Structural Segregation:**\n\n*   **`/users/{userId}`:** Stores user authentication and role information, providing a single source of truth for identity and permissions. Access is primarily `owner == request.auth.uid` with admin overrides.\n*   **`/serviceOfferings/{serviceOfferingId}`:** This top-level collection holds global, static service definitions. It has a homogenous security posture: read-only for clients, read/write for staff/admin. This clear segregation simplifies rules significantly.\n*   **Hierarchical Client-Business Data:** The nesting of `BusinessProfile` under `Client`, and `ClientService`, `BusinessReview`, `SEOMetric` under `BusinessProfile`, creates logical data silos. This means a client user, for example, can only navigate to `/clients/{clientId}/...` if `clientId` is associated with their `userId`, making rules very intuitive and scoped.\n\nThis architecture prioritizes security and performance by moving authorization logic from complex rule evaluations to predictable data structures and explicit denormalized fields."
+    ]
   }
 }

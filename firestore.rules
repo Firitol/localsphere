@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -8,62 +9,36 @@ service cloud.firestore {
      * 'Authorization Independence' via denormalization. By copying ownership identifiers (like clientOwnerUserId) 
      * down the document hierarchy, we ensure that every security decision can be made using only the 
      * document's own data (resource.data), avoiding slow and expensive cross-document lookups (get() calls).
-     *
-     * Data Structure:
-     * - /users: Identity and Role root.
-     * - /clients: Top-level organizations, linked to a User via 'userId'.
-     * - /serviceOfferings: Global catalog of available services.
-     * - /clients/{clientId}/businessProfiles/...: Nested hierarchy for business data, protected by denormalized ownership fields.
-     *
-     * Key Security Decisions:
-     * 1. Strict Ownership: Clients can only access data where the denormalized 'clientOwnerUserId' matches their UID.
-     * 2. Staff Overrides: Rules allow for Staff/Admin access based on the 'role' field in their user profile.
-     * 3. Relational Integrity: On creation, documents must correctly set their ownership and parentage fields to match the authenticated user and the path.
-     * 4. Immutable Links: Critical relational fields (like clientOwnerUserId) are immutable after creation to prevent data hijacking.
-     * 5. Prototyping Flexibility: While authorization is strictly enforced, general data shapes and types are not validated to allow for rapid schema iteration.
      */
 
     // --- HELPER FUNCTIONS ---
 
-    /** @description Checks if the user is authenticated. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the user's UID matches the provided ID. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks if the user has a specific role. Performs a single get() on the user profile. */
     function hasRole(role) {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
-    /** @description Helper for Staff/Admin access. */
     function isStaff() {
       return hasRole('staff') || hasRole('admin');
     }
 
-    /** @description Validates that the existing document belongs to the authenticated client. */
     function isDocClientOwner(data) {
       return isSignedIn() && (data.clientOwnerUserId == request.auth.uid || data.userId == request.auth.uid);
     }
 
-    /** @description Combined ownership and existence check for updates/deletes. */
     function isExistingClientOwner(data) {
       return resource != null && (isDocClientOwner(data) || isStaff());
     }
 
     // --- COLLECTION RULES ---
 
-    /**
-     * @description Rules for user profiles. Users manage their own profile; admins manage everyone.
-     * @path /users/{userId}
-     * @allow (get) If user is the owner.
-     * @deny (list) If user is not the owner or staff.
-     * @principle Ownership and Role-Based Access Control.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId) || isStaff();
       allow list: if isOwner(userId) || isStaff();
@@ -72,27 +47,13 @@ service cloud.firestore {
       allow delete: if isStaff() && resource != null;
     }
 
-    /**
-     * @description Top-level client organizations. Linked to a user via the 'userId' field.
-     * @path /clients/{clientId}
-     * @allow (create) If the user sets themselves as the 'userId'.
-     * @deny (update) If the user tries to change the 'userId' (hijacking).
-     * @principle Denormalized ownership link at the root of the client tree.
-     */
     match /clients/{clientId} {
       allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaff());
-      allow list: if isSignedIn(); // Queries must be filtered by userId
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isStaff());
       allow update: if isExistingClientOwner(resource.data) && (request.resource.data.userId == resource.data.userId);
       allow delete: if isStaff() && resource != null;
 
-      /**
-       * @description Business profiles nested under clients. Uses denormalized 'clientOwnerUserId'.
-       * @path /clients/{clientId}/businessProfiles/{businessProfileId}
-       * @allow (list) If clientOwnerUserId matches.
-       * @deny (create) If clientOwnerUserId is missing or mismatched.
-       * @principle Authorization Independence via denormalization.
-       */
       match /businessProfiles/{businessProfileId} {
         allow get: if isSignedIn() && (resource.data.clientOwnerUserId == request.auth.uid || isStaff());
         allow list: if isSignedIn();
@@ -100,12 +61,6 @@ service cloud.firestore {
         allow update: if isExistingClientOwner(resource.data) && (request.resource.data.clientOwnerUserId == resource.data.clientOwnerUserId);
         allow delete: if isStaff() && resource != null;
 
-        /**
-         * @description Deeply nested client services, reviews, and metrics.
-         * @path /clients/{clientId}/businessProfiles/{businessProfileId}/[subcollection]/{id}
-         * @allow (read/write) Based on denormalized clientOwnerUserId.
-         * @principle Consistent ownership propagation across all sub-entities.
-         */
         match /clientServices/{id} {
           allow get, list: if isSignedIn() && (resource.data.clientOwnerUserId == request.auth.uid || isStaff());
           allow create: if isSignedIn() && (request.resource.data.clientOwnerUserId == request.auth.uid || isStaff());
@@ -129,16 +84,14 @@ service cloud.firestore {
       }
     }
 
-    /**
-     * @description Global catalog of services. Visible to all authenticated users; modified only by staff.
-     * @path /serviceOfferings/{id}
-     * @allow (get, list) Any signed-in user.
-     * @deny (write) Any non-staff user.
-     * @principle Public Read with Owner-Only Writes (where 'Owner' is the system/staff).
-     */
     match /serviceOfferings/{serviceOfferingId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isStaff();
+    }
+
+    match /inquiries/{inquiryId} {
+      allow create: if true; // Public contact form submission
+      allow get, list, update, delete: if isStaff(); // Managed by staff
     }
   }
 }
