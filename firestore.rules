@@ -8,11 +8,11 @@ service cloud.firestore {
     }
 
     function isOwner(data) {
-      return isSignedIn() && data.ownerUid == request.auth.uid;
+      return isSignedIn() && data != null && data.ownerUid == request.auth.uid;
     }
 
     function isStaff() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
 
     match /users/{userId} {
@@ -22,21 +22,23 @@ service cloud.firestore {
     }
 
     match /businesses/{businessId} {
-      allow get: if isSignedIn() && (isOwner(resource.data) || isStaff());
-      allow list: if isSignedIn(); // Queries must include where("ownerUid", "==", request.auth.uid)
-      allow create: if isSignedIn();
+      // Allow get if the user owns the ID (fallback) or is the owner of existing data
+      allow get: if isSignedIn() && (request.auth.uid == businessId || isOwner(resource.data) || isStaff());
+      allow list: if isSignedIn(); // Queries MUST include where("ownerUid", "==", request.auth.uid)
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow update: if isSignedIn() && (isOwner(resource.data) || isStaff());
       allow delete: if isStaff();
 
-      // Authorization Independence: Subcollections check their own ownerUid field
+      // Subcollections rules
       match /{allSubcollections=**} {
-        allow read, write: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isStaff());
-        allow create: if isSignedIn();
+        // Allow list/get/write if the data has the correct ownerUid
+        allow read: if isSignedIn() && (isOwner(resource.data) || isStaff() || resource == null);
+        allow write: if isSignedIn() && (isOwner(resource.data) || isStaff() || (resource == null && request.resource.data.ownerUid == request.auth.uid));
       }
     }
 
     match /serviceOfferings/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isStaff();
     }
 
