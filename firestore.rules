@@ -32,9 +32,18 @@ service cloud.firestore {
       allow update: if isSignedIn() && (isOwner(resource.data) || isStaff());
       allow delete: if isStaff();
 
+      // Explicit rules for CRM and Activity subcollections
+      match /customers/{customerId} {
+        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff());
+      }
+      
+      match /activities/{activityId} {
+        allow read, write: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff());
+      }
+
       match /{allSubcollections=**} {
-        allow read: if isSignedIn() && (isOwner(resource.data) || isStaff() || resource == null);
-        allow write: if isSignedIn() && (isOwner(resource.data) || isStaff() || (resource == null && request.resource.data.ownerUid == request.auth.uid));
+        allow read: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff() || resource == null);
+        allow write: if isSignedIn() && (businessId == request.auth.uid || isOwner(resource.data) || isStaff() || (resource == null && request.resource.data.ownerUid == request.auth.uid));
       }
     }
 
