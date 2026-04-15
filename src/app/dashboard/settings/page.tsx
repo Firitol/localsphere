@@ -16,7 +16,8 @@ import {
   User, 
   CreditCard,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  TrendingUp
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
