@@ -21,37 +21,36 @@ service cloud.firestore {
 
     // Businesses and their subcollections
     match /businesses/{businessId} {
-      // Check if user is the business owner (either by path ID or ownerUid field)
-      function isBusinessOwner() {
-        return isSignedIn() && (businessId == request.auth.uid || (resource != null && resource.data.ownerUid == request.auth.uid));
+      
+      // Helper to check ownership of the business doc itself
+      function ownsBusiness() {
+        return isSignedIn() && (
+          businessId == request.auth.uid || 
+          (resource != null && resource.data.ownerUid == request.auth.uid) ||
+          (request.resource != null && request.resource.data.ownerUid == request.auth.uid)
+        );
       }
 
-      allow get, update: if isBusinessOwner() || isStaff();
-      // Listing top-level businesses requires ownerUid filter or staff access
+      allow get, update: if ownsBusiness() || isStaff();
+      // Listing top-level businesses
       allow list: if isSignedIn() && (isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow delete: if isStaff();
 
-      // Catch-all for subcollections (customers, activities, seoMetrics)
+      // Subcollections (customers, activities, seoMetrics, etc.)
       match /{subcollection}/{docId} {
-        // Allow read if the user owns the parent business (via path or data) or is staff
+        // Explicitly allow read/write if the user owns the parent business.
+        // We prioritize path-based matching (businessId == uid) for reliable listing.
         allow read: if isSignedIn() && (
           businessId == request.auth.uid || 
           isStaff() || 
           (resource != null && resource.data.ownerUid == request.auth.uid)
         );
         
-        // Allow creation if the user owns the parent business
-        allow create: if isSignedIn() && (
+        allow write: if isSignedIn() && (
           businessId == request.auth.uid || 
           isStaff() || 
-          request.resource.data.ownerUid == request.auth.uid
-        );
-        
-        // Allow updates and deletes
-        allow update, delete: if isSignedIn() && (
-          businessId == request.auth.uid || 
-          isStaff() || 
+          (request.resource != null && request.resource.data.ownerUid == request.auth.uid) ||
           (resource != null && resource.data.ownerUid == request.auth.uid)
         );
       }
