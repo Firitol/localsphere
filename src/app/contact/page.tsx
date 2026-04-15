@@ -11,22 +11,48 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useFirestore } from "@/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const db = useFirestore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast({
-        title: "Inquiry Sent!",
-        description: "Our team will reach out to you within 24 hours.",
+    
+    const formData = new FormData(e.currentTarget);
+    const inquiryData = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      businessName: formData.get("businessName"),
+      service: formData.get("service"),
+      message: formData.get("message"),
+      createdAt: serverTimestamp(),
+    };
+
+    addDoc(collection(db, "inquiries"), inquiryData)
+      .then(() => {
+        setLoading(false);
+        toast({
+          title: "Inquiry Sent!",
+          description: "Our team will reach out to you within 24 hours.",
+        });
+        (e.target as HTMLFormElement).reset();
+      })
+      .catch(async (error) => {
+        setLoading(false);
+        const permissionError = new FirestorePermissionError({
+          path: 'inquiries',
+          operation: 'create',
+          requestResourceData: inquiryData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-      (e.target as HTMLFormElement).reset();
-    }, 1500);
   };
 
   return (
@@ -81,37 +107,37 @@ export default function ContactPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Full Name</label>
-                      <Input placeholder="John Doe" required />
+                      <Input name="name" placeholder="John Doe" required />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Business Email</label>
-                      <Input type="email" placeholder="john@company.com" required />
+                      <Input name="email" type="email" placeholder="john@company.com" required />
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Business Name</label>
-                    <Input placeholder="Local Sphere Cafe" required />
+                    <Input name="businessName" placeholder="Local Sphere Cafe" required />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Desired Service</label>
-                    <Select required>
+                    <Select name="service" required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a service" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="gbp">GBP Optimization</SelectItem>
-                        <SelectItem value="seo">Local SEO Mastery</SelectItem>
-                        <SelectItem value="web">Website Development</SelectItem>
-                        <SelectItem value="full">Full Digital Dominance</SelectItem>
+                        <SelectItem value="GBP Optimization">GBP Optimization</SelectItem>
+                        <SelectItem value="Local SEO Mastery">Local SEO Mastery</SelectItem>
+                        <SelectItem value="Website Development">Website Development</SelectItem>
+                        <SelectItem value="Full Digital Dominance">Full Digital Dominance</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">How can we help?</label>
-                    <Textarea placeholder="Tell us about your current challenges..." className="min-h-[120px]" required />
+                    <Textarea name="message" placeholder="Tell us about your current challenges..." className="min-h-[120px]" required />
                   </div>
 
                   <Button type="submit" size="lg" className="w-full py-7 text-lg rounded-xl font-bold" disabled={loading}>
