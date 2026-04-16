@@ -7,11 +7,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Staff check: admins and staff can manage everything
+    // Safe staff check: verifies user document exists and has admin/staff role
     function isStaff() {
       return isSignedIn() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'client') in ['admin', 'staff'];
     }
 
     // --- User profiles ---
@@ -24,47 +24,40 @@ service cloud.firestore {
     // --- Businesses and their nested data ---
     match /businesses/{businessId} {
       
-      // Ownership check for the business path or the document data
+      // Ownership check: matches the path ID to the user UID or checks the ownerUid field
       function isOwner() {
         return isSignedIn() && (
           businessId == request.auth.uid || 
-          (resource != null && resource.data.ownerUid == request.auth.uid)
+          (resource != null && resource.data.get('ownerUid', '') == request.auth.uid)
         );
       }
 
       // Top level business document rules
-      allow get, update: if isOwner() || isStaff();
+      // Path-based 'allow get' is critical for the Dashboard initialization
+      allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff());
       allow list: if isSignedIn() && (isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isOwner() || isStaff();
       allow delete: if isStaff();
 
       // Recursive match for all subcollections (customers, activities, metrics, etc.)
+      // Using businessId path matching ensures 'list' queries work perfectly for owners.
       match /{allSubcollections=**} {
-        // Allow read if the parent business path matches the user's ID
-        // OR if the individual document belongs to the user
-        allow read: if isSignedIn() && (
+        allow read, write: if isSignedIn() && (
           businessId == request.auth.uid || 
           isStaff() || 
-          (resource != null && resource.data.ownerUid == request.auth.uid)
-        );
-        
-        // Allow write if the parent business matches or if staff
-        allow write: if isSignedIn() && (
-          businessId == request.auth.uid || 
-          isStaff() || 
-          (request.resource != null && request.resource.data.ownerUid == request.auth.uid) ||
-          (resource != null && resource.data.ownerUid == request.auth.uid)
+          (resource != null && resource.data.get('ownerUid', '') == request.auth.uid)
         );
       }
     }
 
-    // --- Public Service Inquiries (Lead Gen) ---
+    // --- Public Service Inquiries ---
     match /inquiries/{inquiryId} {
       allow create: if true;
       allow read, write: if isStaff();
     }
 
-    // --- Payment/Subscription Records ---
+    // --- Payments ---
     match /payments/{paymentId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if isSignedIn() && (isStaff() || (resource != null && resource.data.userId == request.auth.uid));
