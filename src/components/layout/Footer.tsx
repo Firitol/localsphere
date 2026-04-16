@@ -19,13 +19,18 @@ export function Footer() {
               Empowering local businesses with scalable digital solutions. Ranking you higher, everywhere.
             </p>
             <div className="flex gap-4">
-              {[Facebook, Twitter, Instagram, Linkedin].map((Icon, i) => (
+              {[
+                { icon: Facebook, href: "#" },
+                { icon: Twitter, href: "#" },
+                { icon: Instagram, href: "#" },
+                { icon: Linkedin, href: "#" }
+              ].map((social, i) => (
                 <Link 
                   key={i} 
-                  href="#" 
+                  href={social.href} 
                   className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all hover:bg-primary hover:text-white hover:-translate-y-1 border border-white/10"
                 >
-                  <Icon className="w-5 h-5" />
+                  <social.icon className="w-5 h-5" />
                 </Link>
               ))}
             </div>

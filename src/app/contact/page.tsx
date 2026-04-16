@@ -62,7 +62,7 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
             
             {/* Left Content Column */}
-            <div className="space-y-10">
+            <div className="space-y-10 order-2 lg:order-1">
               <div className="space-y-6 text-center lg:text-left">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest">
                   Connect with experts
@@ -118,59 +118,61 @@ export default function ContactPage() {
             </div>
 
             {/* Right Form Column */}
-            <Card className="shadow-2xl border-none rounded-[40px] overflow-hidden lg:sticky lg:top-24">
-              <CardHeader className="bg-primary text-primary-foreground p-8 lg:p-10 text-center sm:text-left">
-                <CardTitle className="text-2xl lg:text-3xl font-black">Inquiry Form</CardTitle>
-                <CardDescription className="text-primary-foreground/70 text-base font-medium">Tell us about your digital needs and we'll handle the rest.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 lg:p-10">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Full Name</label>
-                      <Input name="name" className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors" placeholder="John Doe" required />
+            <div className="order-1 lg:order-2">
+              <Card className="shadow-2xl border-none rounded-[40px] overflow-hidden lg:sticky lg:top-24">
+                <CardHeader className="bg-primary text-primary-foreground p-8 lg:p-10 text-center sm:text-left">
+                  <CardTitle className="text-2xl lg:text-3xl font-black">Inquiry Form</CardTitle>
+                  <CardDescription className="text-primary-foreground/70 text-base font-medium">Tell us about your digital needs and we'll handle the rest.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-8 lg:p-10">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Full Name</label>
+                        <Input name="name" className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors" placeholder="John Doe" required />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Business Email</label>
+                        <Input name="email" type="email" className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors" placeholder="john@company.com" required />
+                      </div>
                     </div>
+                    
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Business Email</label>
-                      <Input name="email" type="email" className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors" placeholder="john@company.com" required />
+                      <label className="text-sm font-bold text-slate-700">Business Name</label>
+                      <Input name="businessName" className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors" placeholder="Local Sphere Cafe" required />
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Business Name</label>
-                    <Input name="businessName" className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors" placeholder="Local Sphere Cafe" required />
-                  </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Desired Service</label>
-                    <Select name="service" required>
-                      <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white">
-                        <SelectValue placeholder="Select a service" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl border-slate-200">
-                        <SelectItem value="GBP Optimization">GBP Optimization</SelectItem>
-                        <SelectItem value="Local SEO Mastery">Local SEO Mastery</SelectItem>
-                        <SelectItem value="Website Development">Website Development</SelectItem>
-                        <SelectItem value="Full Digital Dominance">Full Digital Dominance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">Desired Service</label>
+                      <Select name="service" required>
+                        <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-slate-200 focus:bg-white">
+                          <SelectValue placeholder="Select a service" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl border-slate-200">
+                          <SelectItem value="GBP Optimization">GBP Optimization</SelectItem>
+                          <SelectItem value="Local SEO Mastery">Local SEO Mastery</SelectItem>
+                          <SelectItem value="Website Development">Website Development</SelectItem>
+                          <SelectItem value="Full Digital Dominance">Full Digital Dominance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">How can we help?</label>
-                    <Textarea name="message" placeholder="Tell us about your current challenges..." className="min-h-[140px] rounded-2xl bg-slate-50 border-slate-200 focus:bg-white resize-none transition-colors" required />
-                  </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">How can we help?</label>
+                      <Textarea name="message" placeholder="Tell us about your current challenges..." className="min-h-[140px] rounded-2xl bg-slate-50 border-slate-200 focus:bg-white resize-none transition-colors" required />
+                    </div>
 
-                  <Button type="submit" size="lg" className="w-full py-8 text-lg rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all" disabled={loading}>
-                    {loading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <Send className="w-6 h-6 mr-2" />}
-                    Send My Inquiry
-                  </Button>
-                  <p className="text-center text-xs text-muted-foreground font-medium italic">
-                    By submitting, you agree to be contacted via email/phone regarding your inquiry.
-                  </p>
-                </form>
-              </CardContent>
-            </Card>
+                    <Button type="submit" size="lg" className="w-full py-8 text-lg rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all" disabled={loading}>
+                      {loading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <Send className="w-6 h-6 mr-2" />}
+                      Send My Inquiry
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground font-medium italic">
+                      By submitting, you agree to be contacted via email/phone regarding your inquiry.
+                    </p>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </main>

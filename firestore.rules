@@ -7,11 +7,15 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Safe staff check: verifies user document exists and has admin/staff role
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Defensive staff check: handles cases where user doc might not exist yet
     function isStaff() {
       return isSignedIn() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'client') in ['admin', 'staff'];
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
 
     // --- User profiles ---
@@ -25,20 +29,30 @@ service cloud.firestore {
     match /businesses/{businessId} {
       
       // Top level business document rules
-      allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff());
+      // Allow read if user is the direct owner (path matches UID), 
+      // or if the document's internal ownerUid matches, or if they are staff.
+      allow get: if isOwner(businessId) || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid);
       allow list: if isSignedIn() && (isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
+      allow update: if isOwner(businessId) || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid);
       allow delete: if isStaff();
 
-      // Subcollections (activities, customers, seoMetrics, etc.)
-      // Path-based ownership: If the business document ID matches the user's UID, 
-      // they have full access to list and read all nested collections.
+      // Explicit rules for subcollections to ensure 'list' works reliably
+      match /customers/{customerId} {
+        allow read, write: if isOwner(businessId) || isStaff();
+      }
+      
+      match /activities/{activityId} {
+        allow read, write: if isOwner(businessId) || isStaff();
+      }
+
+      match /seoMetrics/{metricId} {
+        allow read, write: if isOwner(businessId) || isStaff();
+      }
+
+      // Catch-all for any other nested data
       match /{allSubcollections=**} {
-        allow read, write: if isSignedIn() && (
-          businessId == request.auth.uid || 
-          isStaff()
-        );
+        allow read, write: if isOwner(businessId) || isStaff();
       }
     }
 
