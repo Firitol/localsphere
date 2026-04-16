@@ -24,29 +24,20 @@ service cloud.firestore {
     // --- Businesses and their nested data ---
     match /businesses/{businessId} {
       
-      // Ownership check: matches the path ID to the user UID or checks the ownerUid field
-      function isOwner() {
-        return isSignedIn() && (
-          businessId == request.auth.uid || 
-          (resource != null && resource.data.get('ownerUid', '') == request.auth.uid)
-        );
-      }
-
       // Top level business document rules
-      // Path-based 'allow get' is critical for the Dashboard initialization
       allow get: if isSignedIn() && (businessId == request.auth.uid || isStaff());
       allow list: if isSignedIn() && (isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isOwner() || isStaff();
+      allow update: if isSignedIn() && (businessId == request.auth.uid || isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow delete: if isStaff();
 
-      // Recursive match for all subcollections (customers, activities, metrics, etc.)
-      // Using businessId path matching ensures 'list' queries work perfectly for owners.
+      // Subcollections (activities, customers, seoMetrics, etc.)
+      // Path-based ownership: If the business document ID matches the user's UID, 
+      // they have full access to list and read all nested collections.
       match /{allSubcollections=**} {
         allow read, write: if isSignedIn() && (
           businessId == request.auth.uid || 
-          isStaff() || 
-          (resource != null && resource.data.get('ownerUid', '') == request.auth.uid)
+          isStaff()
         );
       }
     }
