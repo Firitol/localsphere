@@ -23,34 +23,23 @@ service cloud.firestore {
     // Businesses and their subcollections
     match /businesses/{businessId} {
       
-      // Helper to check ownership of the business doc or its children
+      // Helper to check ownership of the business path or the document data
       function isBusinessOwner() {
         return isSignedIn() && (
           businessId == request.auth.uid || 
-          (resource != null && resource.data.ownerUid == request.auth.uid) ||
-          (request.resource != null && request.resource.data.ownerUid == request.auth.uid)
+          (resource != null && resource.data.ownerUid == request.auth.uid)
         );
       }
 
+      // Top level business document rules
       allow get, update: if isBusinessOwner() || isStaff();
-      // Listing top-level businesses (for staff or finding your own)
       allow list: if isSignedIn() && (isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow delete: if isStaff();
 
-      // Explicitly handle common subcollections for reliability
-      match /customers/{customerId} {
-        allow read, write: if isBusinessOwner() || isStaff();
-      }
-      match /activities/{activityId} {
-        allow read, write: if isBusinessOwner() || isStaff();
-      }
-      match /seoMetrics/{metricId} {
-        allow read, write: if isBusinessOwner() || isStaff();
-      }
-      
-      // Catch-all for other subcollections
-      match /{subcollection}/{docId} {
+      // Recursive match for all subcollections (customers, activities, metrics, etc.)
+      // This ensures that any query to a subcollection inherits the ownership check.
+      match /{allSubcollections=**} {
         allow read, write: if isBusinessOwner() || isStaff();
       }
     }
@@ -64,7 +53,7 @@ service cloud.firestore {
     // Payment/Subscription Records
     match /payments/{paymentId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaff());
+      allow read: if isSignedIn() && (isStaff() || (resource != null && resource.data.userId == request.auth.uid));
       allow update: if isStaff();
     }
   }
