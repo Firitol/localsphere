@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -12,10 +11,7 @@ import {
   Settings, 
   Globe, 
   TrendingUp, 
-  PlusCircle, 
   ChevronRight,
-  BarChart3,
-  Crown,
   Star,
   History,
   MapPin,
@@ -31,14 +27,13 @@ import { collection, query, limit, orderBy, onSnapshot, where } from "firebase/f
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function DashboardPage() {
   const { user, isUserLoading: loading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const [businessData, setBusinessData] = useState<any>(null);
+  const [isSearchingBusiness, setIsSearchingBusiness] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -49,6 +44,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user || !firestore) return;
     
+    // Find the business owned by this user
     const q = query(
       collection(firestore, "businesses"), 
       where("ownerUid", "==", user.uid),
@@ -61,25 +57,22 @@ export default function DashboardPage() {
         if (!snapshot.empty) {
           setBusinessData({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
         }
+        setIsSearchingBusiness(false);
       },
-      async (error) => {
-        const contextualError = new FirestorePermissionError({
-          path: 'businesses',
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', contextualError);
+      () => {
+        setIsSearchingBusiness(false);
       }
     );
     return () => unsubscribe();
   }, [user, firestore]);
 
-  const businessId = businessData?.id || user?.uid;
+  // Use the identified business ID, otherwise null (don't fallback to user.uid to avoid permission errors on non-existent paths)
+  const businessId = businessData?.id;
 
   const customersQuery = useMemoFirebase(() => {
     if (!firestore || !businessId || !user) return null;
     return query(
       collection(firestore, "businesses", businessId, "customers"), 
-      where("ownerUid", "==", user.uid),
       orderBy("createdAt", "desc"),
       limit(5)
     );
@@ -89,7 +82,6 @@ export default function DashboardPage() {
     if (!firestore || !businessId || !user) return null;
     return query(
       collection(firestore, "businesses", businessId, "activities"), 
-      where("ownerUid", "==", user.uid),
       orderBy("timestamp", "desc"),
       limit(5)
     );
@@ -146,7 +138,7 @@ export default function DashboardPage() {
             {/* Premium Status Card */}
             <div className="p-6 bg-slate-900 rounded-[24px] shadow-xl relative overflow-hidden group">
                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                 <Crown className="w-16 h-16 text-white" />
+                 <Zap className="w-16 h-16 text-white" />
                </div>
                <div className="relative z-10 space-y-4">
                   <div className="flex items-center gap-2">
@@ -281,7 +273,7 @@ export default function DashboardPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {customersLoading ? (
+                          {isSearchingBusiness || customersLoading ? (
                             <tr><td colSpan={4} className="py-12 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-200" /></td></tr>
                           ) : customers && customers.length > 0 ? (
                             customers.map((c: any, i) => (
@@ -297,7 +289,7 @@ export default function DashboardPage() {
                               </tr>
                             ))
                           ) : (
-                            <tr><td colSpan={4} className="py-12 text-center text-slate-400 text-sm italic">No demo customers yet.</td></tr>
+                            <tr><td colSpan={4} className="py-12 text-center text-slate-400 text-sm italic">No customer data yet.</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -351,7 +343,7 @@ export default function DashboardPage() {
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="space-y-8 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-50">
-                      {activitiesLoading ? (
+                      {isSearchingBusiness || activitiesLoading ? (
                         <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-slate-200" /></div>
                       ) : activities && activities.length > 0 ? (
                         activities.map((act: any, i) => (
@@ -369,7 +361,7 @@ export default function DashboardPage() {
                         <div className="space-y-8">
                           {[
                             { title: "System Initialized", desc: "LocalSphere instance ready." },
-                            { title: "Dashboard Ready", desc: "Demo data populated." }
+                            { title: "Dashboard Ready", desc: "Your workspace is active." }
                           ].map((act, i) => (
                             <div key={i} className="flex gap-4 relative">
                               <div className="w-6 h-6 rounded-full bg-white border-2 border-slate-100 flex items-center justify-center relative z-10">
