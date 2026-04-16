@@ -2,29 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // --- Helper functions ---
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Staff check: admins and staff can manage everything
     function isStaff() {
       return isSignedIn() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
 
-    // User profiles
+    // --- User profiles ---
     match /users/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isStaff());
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (request.auth.uid == userId || isStaff());
     }
 
-    // Businesses and their subcollections
+    // --- Businesses and their nested data ---
     match /businesses/{businessId} {
       
-      // Helper to check ownership of the business path or the document data
-      function isBusinessOwner() {
+      // Ownership check for the business path or the document data
+      function isOwner() {
         return isSignedIn() && (
           businessId == request.auth.uid || 
           (resource != null && resource.data.ownerUid == request.auth.uid)
@@ -32,25 +33,38 @@ service cloud.firestore {
       }
 
       // Top level business document rules
-      allow get, update: if isBusinessOwner() || isStaff();
+      allow get, update: if isOwner() || isStaff();
       allow list: if isSignedIn() && (isStaff() || (resource != null && resource.data.ownerUid == request.auth.uid));
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow delete: if isStaff();
 
       // Recursive match for all subcollections (customers, activities, metrics, etc.)
-      // This ensures that any query to a subcollection inherits the ownership check.
       match /{allSubcollections=**} {
-        allow read, write: if isBusinessOwner() || isStaff();
+        // Allow read if the parent business path matches the user's ID
+        // OR if the individual document belongs to the user
+        allow read: if isSignedIn() && (
+          businessId == request.auth.uid || 
+          isStaff() || 
+          (resource != null && resource.data.ownerUid == request.auth.uid)
+        );
+        
+        // Allow write if the parent business matches or if staff
+        allow write: if isSignedIn() && (
+          businessId == request.auth.uid || 
+          isStaff() || 
+          (request.resource != null && request.resource.data.ownerUid == request.auth.uid) ||
+          (resource != null && resource.data.ownerUid == request.auth.uid)
+        );
       }
     }
 
-    // Public Service Inquiries (Lead Gen)
+    // --- Public Service Inquiries (Lead Gen) ---
     match /inquiries/{inquiryId} {
       allow create: if true;
       allow read, write: if isStaff();
     }
 
-    // Payment/Subscription Records
+    // --- Payment/Subscription Records ---
     match /payments/{paymentId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if isSignedIn() && (isStaff() || (resource != null && resource.data.userId == request.auth.uid));
